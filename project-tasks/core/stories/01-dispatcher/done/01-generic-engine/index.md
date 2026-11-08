@@ -1,6 +1,6 @@
 ---
 id: PD-01-01
-status: ready
+status: done
 type: feat
 complexity: high
 depends-on: []
@@ -18,9 +18,9 @@ skills: []
 
 # Generic engine and config
 
-Story: [Dispatcher](../index.md)
+Story: [Dispatcher](../../index.md)
 
-Epic: [Standalone planner and dispatcher](../../../index.md)
+Epic: [Standalone planner and dispatcher](../../../../index.md)
 
 **Run this task by hand** in a normal AI session in this repo (the dispatcher cannot run here yet). Open a normal PR. In that PR, move this task folder to `done/` with `status: done` and a `notes.md`, as the format rule's done rule says (the dispatcher normally does this).
 
@@ -42,7 +42,7 @@ Bring the dispatcher engine and its tests into this repo, with every project-spe
   - commit types and a company email pattern: `git_publisher.dart` `CommitMessage`, `DiffScanner`;
   - fixed models: `role_models.dart` `RoleModels.table`;
   - usage text `fvm dart tool/dispatcher.dart`: `dispatcher.dart`.
-- The shared contracts (layout, config schema 1, default models, commands, role reading order) are in the [epic](../../../index.md#shared-contracts).
+- The shared contracts (layout, config schema 1, default models, commands, role reading order) are in the [epic](../../../../index.md#shared-contracts).
 
 ## Contract
 
