@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  analyze:
+  analyze-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -16,3 +16,4 @@ jobs:
           sdk: 3.13.5
       - run: dart pub get
       - run: dart analyze
+      - run: dart test

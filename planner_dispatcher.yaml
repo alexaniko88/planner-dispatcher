@@ -1,0 +1,19 @@
+# Settings for running this repo's own backlog with the dispatcher (schema 1).
+dart: fvm dart
+base_branch: main
+run_folder: planner-dispatcher-runs
+setup:
+  - fvm install --skip-pub-get
+  - fvm dart pub get
+check:
+  - fvm dart format --output=none --set-exit-if-changed lib bin test
+  - fvm dart analyze
+  - fvm dart test
+allowed_commands:
+  - fvm dart format
+  - fvm dart analyze
+  - fvm dart test
+  - fvm dart pub get
+rules: []
+commit_types: [feat, fix, refactor, chore, docs, style, perf, test, build]
+git_email_suffix: "@users.noreply.github.com"
