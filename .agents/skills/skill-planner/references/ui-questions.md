@@ -1,6 +1,6 @@
 # View questions
 
-Check these areas for every task with a view, before the mockup. Apply the question filter in [questions.md](questions.md): evidence can settle an area without a question. Record irrelevant states as not applicable. The settled behavior becomes the task's `## View spec`; unresolved product behavior prevents readiness.
+Check these areas for every task with a view, before the mockup when one is needed. Apply the question filter in [questions.md](questions.md): evidence can settle an area without a question. Record irrelevant states as not applicable. The settled behavior becomes the task's `## View spec`; unresolved product behavior prevents readiness.
 
 ## Look first, ask second
 

@@ -115,8 +115,8 @@ Epic: [<Capability>](../../../index.md)
 
 ## Files and tests
 
-- <Each created or changed file, new or changed.>
-- <Each test file, with its kind (unit, golden, widget).>
+- New: <each file this task creates; changed files are in `touches`.>
+- Tests: <each test file, with its kind (unit, golden, widget).>
 - <Any planned fake or harness edit.>
 
 ## Acceptance

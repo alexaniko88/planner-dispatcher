@@ -7,7 +7,7 @@ paths:
 
 Single source for how the backlog is laid out and how a task is written. Skills and roles link to this file and never copy it.
 
-The backlog lives in `<tasks_dir>/`, where `<tasks_dir>` is the `tasks_dir` value of `planner_dispatcher.yaml` (default `docs/backlog`). It is a path relative to the project root.
+The backlog lives in `<tasks_dir>/`, where `<tasks_dir>` is the `tasks_dir` value of `planner_dispatcher.yaml` (default `docs/backlog`). It is a path relative to the project root. The `paths:` above only matches the default, so with another `tasks_dir` this rule does not load by itself; the skills and roles read it explicitly anyway.
 
 ## Layout
 
@@ -40,7 +40,8 @@ The backlog lives in `<tasks_dir>/`, where `<tasks_dir>` is the `tasks_dir` valu
 
 - Every folder name says what it is: `epic-<slug>`, `story-NN-<slug>` and `task-NN-<slug>`, in lowercase kebab-case. `NN` is a two-digit number that gives the order. Keep a number once it is used, also in `done/`; never renumber.
 - **A task is a folder** with `index.md`. It can also hold `mockup.html` (UI tasks) and `notes.md`.
-- **Finished work moves to `done/`.** A finished task moves into the `done/` folder of its parent (story, `bugs/` or `improvements/`). When the last open task of a story is done, the story moves into `stories/done/`; when the last open story of an epic is done, the epic moves into `<tasks_dir>/done/`. The runner's PR does this when it closes the last task. `<dart> run planner_dispatcher:backlog close-finished` catches what two runs finishing at once left open.
+- **Ids match folders.** The numbers in a task id are the `NN` of its story and task folders: `task-02-<slug>` in `story-03-<slug>` of the epic with `abbr: TPL` is `TPL-03-02`, and `bugs/task-04-<slug>` is `BUG-04`.
+- **Finished work moves to `done/`.** A finished task moves into the `done/` folder of its parent (story, `bugs/` or `improvements/`). When the last open task of a story is done, the story moves into `stories/done/`; when the last open story of an epic is done, the epic moves into `<tasks_dir>/done/`. The runner's PR does this when it closes the last task. `<dart> run planner_dispatcher:backlog close-finished` catches what two runs finishing at once left open. If a planning PR and a runner PR both moved the same folder and conflict, keep the base branch's version and run `close-finished` again.
 - **New work reopens closed work.** Before adding a task to a closed story or epic, run `<dart> run planner_dispatcher:backlog reopen <path>`; it moves the story, and its epic when closed, back out of `done/` and fixes the links. Done tasks stay in `done/`.
 - **People read tasks by name.** Refer to a task as its title followed by its id, for example `Save template (TPL-03-02)`, never by the id alone.
 - Standalone bugs and improvements have no epic or story. Use them for a broken behavior (`bugs/`) or a change to something that already works (`improvements/`).
@@ -90,7 +91,7 @@ After the front matter, the title and the story and epic link lines, these secti
 5. `## Mockup` (visual tasks only): link to the approved `mockup.html` and the states this task implements.
 6. `## Decisions` (only when there are choices a runner might otherwise reverse).
 7. `## Out of scope`
-8. `## Files and tests`: each created or changed file, each test file with its kind, and any planned fake or harness change. The test cases are the `Check`s in `## Acceptance`. Explain a behavioral widget test, or why no test is planned, only when that is the case.
+8. `## Files and tests`: only what `touches` and the `Check`s do not say: which files are new, each test file with its kind, and any planned fake or harness change. Explain a behavioral widget test, or why no test is planned, only when that is the case.
 9. `## Acceptance`: the task's behavior, one checkbox per behavior or edge case, on one line each: `- [ ] When <situation>, then <result>. Check: <check>.` Start with `Given <state>,` only when the starting state is not obvious. There is no separate behavior section: this list is the specification, the tests to write and the definition of done.
 
 A `Check` is one of these, and nothing else:
@@ -113,7 +114,7 @@ All of these are true:
 
 - No open decision is left, and the task reads clearly to an agent that has not seen the planning conversation (cold read passed).
 - Every criterion has a `Check` of an allowed kind.
-- A visual widget/assembly task has its view spec and a linked mockup the user approved. ViewModel/state-only tasks omit them.
+- A visual widget/assembly task has its view spec, and a linked mockup the user approved when the change needed one (a new screen, sheet, dialog or layout). ViewModel/state-only tasks omit both.
 - `complexity`, `depends-on` and `touches` are filled in. `depends-on` ids exist.
 - Its contract, consumer/assembly ownership and exact validation plan are settled, consistent with its dependencies and executable within runner boundaries. No required test infrastructure or technical decision is left for a runner to discover.
 - The whole split has complete requirement coverage and compatible contracts. Each PR preserves a buildable, usable app with its completed prerequisites.

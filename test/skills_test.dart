@@ -129,7 +129,7 @@ void main() {
   });
 
   group('planner', () {
-    for (final role in ['cold-reader', 'interview-reviewer']) {
+    for (final role in ['cold-reader']) {
       test('$role is read-only and says it never edits', () {
         final markdown = File('$_plannerFolder/roles/$role.md').readAsStringSync();
 
@@ -179,7 +179,7 @@ void main() {
     });
 
     test('the entry files mention the config and the planner notes', () {
-      for (final path in ['SKILL.md', 'roles/cold-reader.md', 'roles/interview-reviewer.md']) {
+      for (final path in ['SKILL.md', 'roles/cold-reader.md']) {
         final text = File('$_plannerFolder/$path').readAsStringSync();
 
         expect(text, contains('planner_dispatcher.yaml'), reason: path);

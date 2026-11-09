@@ -1,6 +1,6 @@
 # Mockup
 
-A mockup is one self-contained HTML file, `mockup.html`. Before task splitting, keep it beside the planning record. Once the split is agreed, move it to the owning story (or standalone visual task) and update links. Visual block and assembly tasks link to its relevant states; do not make copies. State-only tasks need no mockup. The user approves the view before implementation, and goldens (when `goldens_dir` is set) verify appearance afterward.
+A mockup is one self-contained HTML file, `mockup.html`. The planner builds one only for a new screen, sheet, dialog or layout (step 5 of the skill). Before task splitting, keep it beside the planning record. Once the split is agreed, move it to the owning story (or standalone visual task) and update links. Visual block and assembly tasks link to its relevant states; do not make copies. State-only tasks need no mockup. The user approves the view before implementation, and goldens (when `goldens_dir` is set) verify appearance afterward.
 
 ## How to build it
 

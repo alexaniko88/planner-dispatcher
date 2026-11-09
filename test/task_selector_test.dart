@@ -55,6 +55,16 @@ void main() {
       expect(Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
     });
 
+    test('a backlog folder named done does not make its tasks done', () {
+      final task = Task.tryParse(
+        path: 'work/done/backlog/epic-x/stories/story-01-s/task-01-t/index.md',
+        text: _task(id: 'X-01-01'),
+        root: 'work/done/backlog',
+      );
+
+      expect(task?.isDone, isFalse);
+    });
+
     test('a task under done/ is done, also when its story or epic is closed', () {
       for (final path in [
         'docs/backlog/epic-x/stories/story-01-s/done/task-01-t/index.md',

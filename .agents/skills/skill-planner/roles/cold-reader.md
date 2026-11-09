@@ -12,9 +12,9 @@ You are an engineer who must implement each task named in your brief and cannot 
 
 Read the shared files once, then each task.
 
-- `planner_dispatcher.yaml`, every file in its `rules` list, and the sections `## UI sources` and `## Checks` of `.agents/planner-dispatcher/planner-notes.md`.
+- `planner_dispatcher.yaml` and every file in its `rules` list.
 - The sections "Task `index.md`" and "When a task is `ready`" of `.agents/rules/backlog-format.md`.
-- The sections Common and Tests of `.agents/skills/skill-dispatcher/references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`.
+- The sections Common and Tests of `.agents/planner-dispatcher/project-overrides.md`, and `## Checks` of `.agents/planner-dispatcher/planner-notes.md`.
 - The story and epic indexes named in your brief, or the parent category index of a standalone task.
 - Each task `index.md` named in your brief, all of it, and its linked mockup when visual.
 - Each task's upstream task contracts (the tasks in its `depends-on`). Planned contracts may precede the code; report missing decisions, not the absence of code a dependency plans to write.

@@ -11,11 +11,14 @@ typedef ReadIndexFiles = Future<Map<String, String>> Function();
 class TaskLoader {
   final ReadIndexFiles read;
 
-  const TaskLoader(this.read);
+  /// The backlog folder the read paths start with.
+  final String root;
+
+  const TaskLoader(this.read, {this.root = ''});
 
   /// Reads the files of a local folder, for example `docs/backlog`.
   factory TaskLoader.fromDisk({String root = DispatcherConfig.defaultTasksDir}) {
-    return TaskLoader(() async {
+    return TaskLoader(root: root, () async {
       final files = <String, String>{};
       final folder = Directory(root);
       if (!folder.existsSync()) return files;
@@ -35,7 +38,7 @@ class TaskLoader {
     required RunCommand run,
     String root = DispatcherConfig.defaultTasksDir,
   }) {
-    return TaskLoader(() async {
+    return TaskLoader(root: root, () async {
       final files = <String, String>{};
       final listing = await run('git', ['ls-tree', '-r', '--name-only', ref, root]);
       if (!listing.ok) return files;
@@ -53,7 +56,7 @@ class TaskLoader {
     final files = await read();
     final tasks = <Task>[];
     for (final MapEntry(:key, :value) in files.entries) {
-      if (Task.tryParse(path: key, text: value) case final task?) tasks.add(task);
+      if (Task.tryParse(path: key, text: value, root: root) case final task?) tasks.add(task);
     }
     tasks.sort((a, b) => a.directory.compareTo(b.directory));
     return tasks;

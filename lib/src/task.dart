@@ -12,6 +12,9 @@ class Task {
   final List<String> touches;
   final List<String> skills;
   final String directory;
+
+  /// The backlog folder the [directory] starts with, for example `docs/backlog`.
+  final String root;
   final String title;
   final String text;
 
@@ -24,11 +27,17 @@ class Task {
     required this.touches,
     required this.skills,
     required this.directory,
+    this.root = '',
     required this.title,
     required this.text,
   });
 
-  bool get isDone => directory.contains('/done/');
+  /// Whether the task, its story or its epic is in a `done/` folder. Only the
+  /// part below [root] counts, so a backlog folder named `done` is no problem.
+  bool get isDone {
+    final below = root.isNotEmpty && directory.startsWith('$root/') ? directory.substring(root.length + 1) : directory;
+    return below.split('/').contains('done');
+  }
 
   bool get isReady => status == 'ready' && !isDone;
 
@@ -57,7 +66,7 @@ class Task {
   }
 
   /// Returns null when [path] is not a task `index.md` (an epic or story has no `id`).
-  static Task? tryParse({required String path, required String text}) {
+  static Task? tryParse({required String path, required String text, String root = ''}) {
     if (!path.endsWith('/index.md')) return null;
     final front = text.frontMatter;
     final id = _scalar(front['id']);
@@ -71,6 +80,7 @@ class Task {
       touches: _list(front['touches']),
       skills: _list(front['skills']),
       directory: path.substring(0, path.length - '/index.md'.length),
+      root: root,
       title: text.firstHeading,
       text: text,
     );
