@@ -1,6 +1,6 @@
 # Backlog templates
 
-Use these as starting points. Replace example names and all placeholders with the agreed scope. Omit irrelevant fields rather than leaving empty headings. Requirements should describe observable behavior; a list of implementation actions alone is not acceptance criteria. The layout, ids, task fields and the ready checklist are defined in [.agents/rules/backlog-format.md](../../../rules/backlog-format.md); these templates only show the shape.
+These show the shape only; the sections and their rules are in [.agents/rules/backlog-format.md](../../../rules/backlog-format.md). Replace every placeholder. Fill every front matter field, but leave out a section that does not apply rather than writing an empty heading. Write short: bullets, no background story, and nothing a parent already says.
 
 ## Epic index
 
@@ -15,25 +15,21 @@ abbr: <ABBR>
 
 ## Goal
 
-<Who benefits, what changes, and why.>
+<One or two lines: who benefits and what changes.>
 
-## Agreed behavior and boundaries
+## Boundaries
 
-- <Behavior agreed with the user.>
-- <First-version exclusions and future scope.>
+- In: <what this epic covers.>
+- Out: <first-version exclusions and future scope.>
 
-## Decisions and current constraints
+## Shared contracts
 
-<Relevant architecture/storage choices, observed app behavior, and unresolved decisions. Distinguish choices from recommendations.>
+<Only when stories share symbols, data or rules. Mark planned new symbols as new.>
 
 ## Stories
 
-1. [<Outcome>](stories/01-<story-slug>/index.md) — <scope>.
-2. [<Outcome>](stories/02-<story-slug>/index.md) — <scope>.
-
-## Delivery order
-
-<Dependencies, what can proceed independently, and the first usable release.>
+1. [<Outcome>](stories/01-<story-slug>/index.md)
+2. [<Outcome>](stories/02-<story-slug>/index.md)
 ```
 
 ## Story index
@@ -45,37 +41,30 @@ Path: `<tasks_dir>/<epic-slug>/stories/01-<story-slug>/index.md`
 
 Epic: [<Capability>](../../index.md)
 
-## User outcome
-
-As <user>, I want <behavior> so that <benefit>.
+<One line: who gets what.>
 
 ## Scope
 
-<Included behavior and meaningful exclusions.>
+- In: <included behavior.>
+- Out: <meaningful exclusions.>
 
-## Acceptance criteria
+## Requirements
 
-- <Observable successful result.>
-- <Relevant interruption/error/boundary behavior.>
+- R1: <observable behavior agreed with the user> — <task ids>.
+- R2: <...> — <task ids>.
 
 ## Tasks
 
-1. [<Deliverable>](01-<task-slug>/index.md).
-2. [<Deliverable>](02-<task-slug>/index.md).
-
-## Dependencies and open decisions
-
-<Links to prerequisites and decisions that still need discussion. A story with a decision still open says what requires confirmation before its tasks can be `ready`.>
+1. [<Deliverable>](01-<task-slug>/index.md)
+2. [<Deliverable>](02-<task-slug>/index.md)
 
 ## Shared contracts
 
-<Agreed symbols, paths, signatures, data and failure/lifecycle rules shared by tasks. Clearly label planned new symbols. Link cross-story agreements in the epic instead of copying them. Name the assembly owner.>
+<Only when two or more tasks share something: symbols, paths, signatures, data and failure rules, with planned new symbols marked as new. Name the task that wires the pieces together.>
 
-## Requirement coverage
+## Open decisions
 
-| Requirement | Contributing tasks | Acceptance checks and assembled verification owner |
-| --- | --- | --- |
-| R1: <agreed behavior> | <task ids> | <task acceptance references and exact check> |
+<Only while a task of this story is `draft`: what must be confirmed before it can be `ready`.>
 ```
 
 ## Task
@@ -102,23 +91,23 @@ Epic: [<Capability>](../../../index.md)
 
 ## Goal
 
-<Concrete result this task delivers, in 2 or 3 sentences.>
+<What this task delivers, in one or two sentences. Name the requirement ids it serves.>
 
 ## Context
 
-<Relative links to the story, epic, related code and goldens. Verified repository-relative code entry points. Name where new code belongs, following the project rules. A helper on one type goes where the project rules put new code.>
+- <Verified code entry points and goldens that matter, and where new code goes under the project rules.>
 
 ## Contract
 
-<Exact provided/consumed symbols and locations, marked existing, new here or provided by a dependency task id. Link shared agreements in the parent. Specify inputs, outputs, failures and relevant ownership/disposal. Name the consumer and assembly task ids for an unwired piece; for assembly, name the pieces and wiring this task owns.>
+<Only when the task provides or uses something from another task.>
 
-## Behavior
-
-<Exact behavior and edge cases.>
+- <Symbol and location> — <existing | new here | provided by <task id>>: <signature, inputs, outputs, failures, ownership>.
 
 ## Decisions
 
-- <What the user decided, and why.>
+<Only choices a runner might otherwise reverse.>
+
+- <Decision.>
 
 ## Out of scope
 
@@ -126,14 +115,17 @@ Epic: [<Capability>](../../../index.md)
 
 ## Files and tests
 
-<Exact files, tests/cases, golden outputs, literal check commands, and any planned fakes or harness edits. Explain a behavioral widget test's necessity or why no new test adds value. Include applicable existing checks. Reuse the runner rules' boundaries instead of copying them here.>
+- <Each created or changed file, new or changed.>
+- <Each test file, with its kind (unit, golden, widget).>
+- <Any planned fake or harness edit.>
 
 ## Acceptance
 
-- [ ] When <situation>, then <result>. Check: <test, golden or command>.
+- [ ] When <situation>, then <result>. Check: `<test file>` "<test case>".
+- [ ] Given <state, only when not obvious>, when <situation>, then <result>. Check: <allowed check>.
 ```
 
-For a visual widget or assembly task, add `## View spec` (after `## Behavior`) and `## Mockup` (after it), as listed in the rule file. Link the parent's approved design when shared. Pure logic and ViewModel/state-only tasks omit both.
+For a visual widget or assembly task, add `## View spec` and `## Mockup` after `## Contract` (or after `## Context` when there is no contract). Link the parent's approved mockup when shared. Pure logic and state-only tasks omit both.
 
 ## Standalone bug or improvement task
 
@@ -143,7 +135,7 @@ Use the task template above with these changes:
 
 - Front matter `id` is `BUG-01` or `IMP-01`; `type` is `fix` for a bug and `improve` for an improvement.
 - Replace the story and epic links with a link to the parent category `index.md` (`Bugs` or `Improvements`). Related epic or story links are optional.
-- For bugs, add expected and actual behavior, reproduction steps, environment and impact when known, in `## Context`. State unknowns and distinguish suspected causes from a confirmed diagnosis. A bug is not `ready` until its cause is confirmed.
-- For improvements, add the current behavior or limitation, the desired change and the benefit, in `## Context`.
+- For a bug, `## Context` holds expected and actual behavior, reproduction steps and the confirmed cause with its evidence.
+- For an improvement, `## Context` holds the current behavior or limitation, the desired change and the benefit.
 
 Each category `index.md` explains what belongs in that folder and lists its tasks. Keep it explicitly empty until real reports or proposals exist; example filenames are not tasks to create.

@@ -16,7 +16,7 @@ Skills a task may list in `skills:`, or `None`.
 
 ## Checks
 
-What the configured `check` covers and what it does not.
+What the configured `check` covers and what it does not. When `goldens_dir` is set, the per-file command that updates goldens.
 
 ## Coverage checks
 
