@@ -1,6 +1,6 @@
 ---
 id: PD-02-01
-status: ready
+status: done
 type: feat
 complexity: medium
 depends-on: [PD-01-02]
@@ -14,9 +14,9 @@ skills: []
 
 # Generic planner skill
 
-Story: [Planner](../index.md)
+Story: [Planner](../../index.md)
 
-Epic: [Standalone planner and dispatcher](../../../index.md)
+Epic: [Standalone planner and dispatcher](../../../../index.md)
 
 ## Goal
 
@@ -48,7 +48,7 @@ Add the planner skill, its references and its two roles in a generic form, plus 
   - "master": "the configured `base_branch`"; the sync step says it switches to the base branch;
   - the planning branch stays `git switch -c feat/plan-<short-topic>` unless the planner notes give another prefix; commit messages follow the config's `rules` and the attribution rule in the planner notes; the email check uses the config's `git_email_suffix` when set; the PR title follows the planner notes;
   - strings: "user-facing text in every language the project rules require (English only when they name none)";
-  - `task-splitting.md`: "ViewModel/state block" becomes "State/logic block"; "the existing snapshot harness" becomes "the project's golden test named in the planner notes"; "under `CLAUDE.md`" becomes "under the project rules"; `templates.md`: the layer and `extensions/` text becomes "where the project rules put new code". Generic UI words (snackbar, haptic feedback) and the generic words "ViewModel" and "timer" in examples stay (Flutter and Dart projects only); in `templates.md`, the inline text `` `[Bugs](../index.md)` or `[Improvements](../index.md)` `` becomes "a link to the parent category `index.md` (`Bugs` or `Improvements`)" so it is no longer a Markdown link;
+  - `task-splitting.md`: "ViewModel/state block" becomes "State/logic block"; "the existing snapshot harness" becomes "the project's golden test named in the planner notes"; "under `CLAUDE.md`" becomes "under the project rules"; `templates.md`: the layer and `extensions/` text becomes "where the project rules put new code". Generic UI words (snackbar, haptic feedback) and the generic words "ViewModel" and "timer" in examples stay (Flutter and Dart projects only); in `templates.md`, the inline text `` `[Bugs](../../index.md)` or `[Improvements](../index.md)` `` becomes "a link to the parent category `index.md` (`Bugs` or `Improvements`)" so it is no longer a Markdown link;
   - integration tests: `task-splitting.md` says "When the project rules or planner notes mention integration tests, plan them outside dispatcher tasks and never use them as acceptance checks"; `SKILL.md` step 8 says "Do not add an integration-test skill to ordinary implementation tasks";
   - app-specific coverage examples: removed; the planner adds the planner notes' `## Coverage checks`;
   - runner boundaries everywhere: `../skill-dispatcher/references/runner-rules.md` plus `.agents/planner-dispatcher/project-overrides.md`.

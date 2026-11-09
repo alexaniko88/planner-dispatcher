@@ -17,7 +17,7 @@ The planner skill, its references and its two roles, generic; the planner notes 
 
 ## Tasks
 
-1. [PD-02-01: Generic planner skill](01-generic-planner-skill/index.md).
+1. [PD-02-01: Generic planner skill](done/01-generic-planner-skill/index.md).
 
 ## Dependencies and open decisions
 
