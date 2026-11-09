@@ -1,6 +1,6 @@
 ---
 id: PD-03-01
-status: ready
+status: done
 type: feat
 complexity: medium
 depends-on: [PD-02-01]
@@ -15,9 +15,9 @@ skills: []
 
 # Install command
 
-Story: [Distribution](../index.md)
+Story: [Distribution](../../index.md)
 
-Epic: [Standalone planner and dispatcher](../../../index.md)
+Epic: [Standalone planner and dispatcher](../../../../index.md)
 
 ## Goal
 
