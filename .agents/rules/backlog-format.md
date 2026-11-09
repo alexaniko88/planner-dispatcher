@@ -18,23 +18,31 @@ The backlog lives in `<tasks_dir>/`, where `<tasks_dir>` is the `tasks_dir` valu
 │       └── planning.md
 ├── bugs/
 │   ├── index.md
-│   └── 01-<slug>/
+│   ├── task-01-<slug>/
+│   └── done/
 ├── improvements/
 │   ├── index.md
-│   └── 01-<slug>/
-└── <epic-slug>/
-    ├── index.md
-    └── stories/
-        └── 01-<story-slug>/
-            ├── index.md
-            ├── 01-<task-slug>/
-            └── done/
-                └── 02-<task-slug>/
+│   ├── task-01-<slug>/
+│   └── done/
+├── epic-<slug>/
+│   ├── index.md
+│   └── stories/
+│       ├── story-01-<slug>/
+│       │   ├── index.md
+│       │   ├── task-01-<slug>/
+│       │   └── done/
+│       │       └── task-02-<slug>/
+│       └── done/
+│           └── story-02-<slug>/
+└── done/
+    └── epic-<slug>/
 ```
 
-- Lowercase kebab-case paths. Stories and tasks have a two-digit prefix that gives their order. Epics have none. Keep a number once it is used; never renumber.
+- Every folder name says what it is: `epic-<slug>`, `story-NN-<slug>` and `task-NN-<slug>`, in lowercase kebab-case. `NN` is a two-digit number that gives the order. Keep a number once it is used, also in `done/`; never renumber.
 - **A task is a folder** with `index.md`. It can also hold `mockup.html` (UI tasks) and `notes.md`.
-- **Only tasks are archived.** A finished task moves into the `done/` folder of its parent (story, `bugs/` or `improvements/`). Epics and stories never move, so new work can always be added to them.
+- **Finished work moves to `done/`.** A finished task moves into the `done/` folder of its parent (story, `bugs/` or `improvements/`). When the last open task of a story is done, the story moves into `stories/done/`; when the last open story of an epic is done, the epic moves into `<tasks_dir>/done/`. The runner's PR does this when it closes the last task. `<dart> run planner_dispatcher:backlog close-finished` catches what two runs finishing at once left open.
+- **New work reopens closed work.** Before adding a task to a closed story or epic, run `<dart> run planner_dispatcher:backlog reopen <path>`; it moves the story, and its epic when closed, back out of `done/` and fixes the links. Done tasks stay in `done/`.
+- **People read tasks by name.** Refer to a task as its title followed by its id, for example `Save template (TPL-03-02)`, never by the id alone.
 - Standalone bugs and improvements have no epic or story. Use them for a broken behavior (`bugs/`) or a change to something that already works (`improvements/`).
 - Indexes link to their children and carry no status, counts or progress. State is deduced (see below).
 - A story may own one approved `mockup.html` shared by its visual tasks. Tasks link to the relevant states instead of copying the design. A standalone visual task owns its mockup itself.
@@ -118,12 +126,12 @@ Nothing writes a progress status. From the repo:
 
 | What exists | State |
 | --- | --- |
-| Task folder is under `done/` on the base branch | done |
+| Task folder is under a `done/` folder on the base branch (its own, its story's or its epic's) | done |
 | Open PR from the task branch | in review |
 | Task branch on the remote, no PR | in progress, or blocked (a `wip:` commit and `## Blocked` in `notes.md`) |
 | `status: ready`, every `depends-on` done, no overlap with a running task | can be picked |
 
-The task branch is `<type>/<id-lowercase>-<slug>`, for example `feat/tpl-03-02-save-template`. The worker moves its own task folder to `done/` (with `status: done`) in its PR, so merging the PR means the task is done.
+The task branch is `<type>/<id-lowercase>-<slug>`, where `<slug>` is the folder name without `task-NN-`, for example `feat/tpl-03-02-save-template` for `task-02-save-template`. The worker moves its own task folder to `done/` (with `status: done`) in its PR, so merging the PR means the task is done.
 
 ## Overlap
 

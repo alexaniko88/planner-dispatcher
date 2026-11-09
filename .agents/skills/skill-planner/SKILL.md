@@ -24,6 +24,7 @@ The layout, ids, task fields and sections, the acceptance format, `touches`, the
 
 These rules apply to every step below and own the question format; the references only link here.
 
+- **Tasks by name.** Refer to a task as its title followed by its id, for example `Save template (TPL-03-02)`, never by the id alone. The same goes for stories and epics: their title, not their folder or number.
 - **Work quietly.** Do not narrate reads, searches, writes or checks. Messages are questions, blockers, the mockup, the split in step 6, the criteria in step 7 or the final summary in step 10.
 - **One question per message.** Never show two questions at once, not even as a numbered list. With a question dialog, put exactly one question in each call. Wait for the answer before the next.
 - **Atomic questions.** Ask for one decision. Keep the question short, clear and in plain words, so the user understands it on the first read: one line when you can, plus at most one short line of context. Split independent decisions; alternatives for the same decision stay together. Never hide several decisions inside one yes/no question.
@@ -52,8 +53,9 @@ These rules apply to every step below and own the question format; the reference
 Find the facts yourself; ask the user only for decisions.
 
 - Read the config, the files in its `rules`, the planner notes, the format rule and the code the idea touches. For UI, read what the planner notes' `## UI sources` names and, when `goldens_dir` is set, the matching images there. Check a library's official documentation when a choice depends on what it can do.
+- Run `<dart> run planner_dispatcher:backlog close-finished` so finished stories and epics are in `done/`; its moves go into the planning commit.
 - Search all of `<tasks_dir>/`, including `done/` folders, for the same or overlapping work (search related terms, not only the title). If it exists, extend it, and name it in your next question when the user needs to know. For a finished task, decide whether the new work is a duplicate, a regression or a follow-up, and link it. If that is unclear, ask.
-- Find the epic and story each new task belongs to by outcome and requirements, not by title. Epics and stories never move, so add to them freely. Use `bugs/` or `improvements/` for a standalone report. Ask the user only if two parents fit equally well. When you extend a story, bring its pending tasks that still use an older layout (for example a `## Behavior` section) to the current format.
+- Find the epic and story each new task belongs to by outcome and requirements, not by title. Use `bugs/` or `improvements/` for a standalone report. When the parent is closed, run `<dart> run planner_dispatcher:backlog reopen <path>` before you add to it; never move backlog folders by hand. Ask the user only if two parents fit equally well. When you extend a story, bring its pending tasks that still use an older layout (for example a `## Behavior` section) to the current format.
 
 ## 2. Pick the depth
 
@@ -86,7 +88,7 @@ Run this only for an epic with three or more stories, and only once. Run one fre
 
 ## 6. Split into tasks
 
-Read [references/task-splitting.md](references/task-splitting.md) and plan the split. Then show it in one message: the epic, stories and tasks (one line each), and below them under "Assumptions" every low-impact decision you took without asking (one line each, with its D reference). Ask one yes or no question ("Are this split and these assumptions right?"). A rejected assumption becomes a normal question; reuse agreement already given.
+Read [references/task-splitting.md](references/task-splitting.md) and plan the split. Then show it in one message: the epic, stories and tasks (one line each, by name), and below them under "Assumptions" every low-impact decision you took without asking (one line each, with its D reference). Ask one yes or no question ("Are this split and these assumptions right?"). A rejected assumption becomes a normal question; reuse agreement already given.
 
 ## 7. Acceptance criteria
 
@@ -102,7 +104,7 @@ Read [references/templates.md](references/templates.md) and write the backlog fi
 - `skills` lists project skills a runner must read, chosen from the planner notes' `## Project skills`.
 - Verify every existing code name and path in the repo. Mark planned new symbols as new; never present them as existing APIs.
 - Move the current requirements, decisions and exclusions from the planning record into the backlog files. Runners never see the record.
-- A new epic gets an `abbr` that no other epic uses. Number stories and tasks with the next unused number, counting the `done/` folders too.
+- Name folders as the format rule says (`epic-<slug>`, `story-NN-<slug>`, `task-NN-<slug>`). A new epic gets an `abbr` that no other epic uses. Number stories and tasks with the next unused number, counting the `done/` folders too.
 
 ## 9. Cold read
 

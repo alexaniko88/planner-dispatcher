@@ -33,7 +33,7 @@ A branch is deleted only when GitHub shows a merged pull request into the base b
 Always use `<dart> run planner_dispatcher:dispatcher ...`.
 
 1. **Find a task.** Run `<dart> run planner_dispatcher:dispatcher next` (add `--skip=ID,ID` for tasks the user already declined or that you started in this session). It prints JSON: `next` (the first task that can start, or `null`), `alsoReady`, and `waiting` (why each other ready task cannot start). When `next` is `null`, say why in one or two lines from `waiting` and stop.
-2. **Offer it.** Show the task id, title, `complexity`, what it touches, and its dependencies, in plain English. Ask which tool runs it: Claude, Codex or Antigravity (recommend Claude). The user can also say "skip" (go back to step 1 with `--skip`) or "stop".
+2. **Offer it.** Name every task by its `label`, the title followed by the id (`Save template (TPL-03-02)`), never by the id alone. Show its label, `complexity`, what it touches, and its dependencies, in plain English. Ask which tool runs it: Claude, Codex or Antigravity (recommend Claude). The user can also say "skip" (go back to step 1 with `--skip`) or "stop".
    The models are not a question. Each tool has default models per stage, in `lib/src/role_models.dart`; a project may override any stage under `models` in `planner_dispatcher.yaml`:
 
    | Tool | Implementer | Tests | Reviewer |

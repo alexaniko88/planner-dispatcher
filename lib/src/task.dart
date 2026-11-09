@@ -37,7 +37,11 @@ class Task {
 
   String get indexPath => '$directory/index.md';
 
-  String get slug => directory.split('/').last.replaceFirst(RegExp(r'^\d+-'), '');
+  /// The folder name without its `task-NN-` prefix (or an older `NN-` one).
+  String get slug => directory.split('/').last.replaceFirst(RegExp(r'^(task-)?\d+-'), '');
+
+  /// How a person reads the task: `Save template (TPL-03-02)`.
+  String get label => '$title ($id)';
 
   /// `<type>/<id-lowercase>-<slug>`, for example `feat/tpl-03-02-save-template`.
   String get branch => '$type/${id.toLowerCase()}-$slug';

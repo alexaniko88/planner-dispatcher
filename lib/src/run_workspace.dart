@@ -56,7 +56,7 @@ class RunWorkspace {
     }
 
     try {
-      workspace.writeState(taskId: task.id, tool: tool, stage: 'prepare');
+      workspace.writeState(taskId: task.id, task: task.label, tool: tool, stage: 'prepare');
       await step('git', ['clone', '--quiet', '--branch', baseBranch, originUrl, 'repo']);
       final remote = await run('git', [
         'ls-remote',
@@ -107,10 +107,11 @@ class RunWorkspace {
   }
 
   /// Records which stage is running, for the `status` command.
-  void writeState({required String taskId, required String tool, required String stage}) {
+  void writeState({required String taskId, required String task, required String tool, required String stage}) {
     File(stateFile).writeAsStringSync(
       jsonEncode({
         'taskId': taskId,
+        'task': task,
         'tool': tool,
         'stage': stage,
         'pid': pid,

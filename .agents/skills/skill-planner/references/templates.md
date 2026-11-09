@@ -4,7 +4,7 @@ These show the shape only; the sections and their rules are in [.agents/rules/ba
 
 ## Epic index
 
-Path: `<tasks_dir>/<epic-slug>/index.md`
+Path: `<tasks_dir>/epic-<slug>/index.md`
 
 ```markdown
 ---
@@ -28,13 +28,13 @@ abbr: <ABBR>
 
 ## Stories
 
-1. [<Outcome>](stories/01-<story-slug>/index.md)
-2. [<Outcome>](stories/02-<story-slug>/index.md)
+1. [<Outcome>](stories/story-01-<slug>/index.md)
+2. [<Outcome>](stories/story-02-<slug>/index.md)
 ```
 
 ## Story index
 
-Path: `<tasks_dir>/<epic-slug>/stories/01-<story-slug>/index.md`
+Path: `<tasks_dir>/epic-<slug>/stories/story-01-<slug>/index.md`
 
 ```markdown
 # STORY 1: <Outcome>
@@ -55,8 +55,8 @@ Epic: [<Capability>](../../index.md)
 
 ## Tasks
 
-1. [<Deliverable>](01-<task-slug>/index.md)
-2. [<Deliverable>](02-<task-slug>/index.md)
+1. [<Deliverable>](task-01-<slug>/index.md)
+2. [<Deliverable>](task-02-<slug>/index.md)
 
 ## Shared contracts
 
@@ -69,7 +69,7 @@ Epic: [<Capability>](../../index.md)
 
 ## Task
 
-Path: `<tasks_dir>/<epic-slug>/stories/01-<story-slug>/01-<task-slug>/index.md`
+Path: `<tasks_dir>/epic-<slug>/stories/story-01-<slug>/task-01-<slug>/index.md`
 
 ```markdown
 ---
@@ -129,7 +129,7 @@ For a visual widget or assembly task, add `## View spec` and `## Mockup` after `
 
 ## Standalone bug or improvement task
 
-Paths: `<tasks_dir>/bugs/01-<bug-slug>/index.md` or `<tasks_dir>/improvements/01-<improvement-slug>/index.md`.
+Paths: `<tasks_dir>/bugs/task-01-<slug>/index.md` or `<tasks_dir>/improvements/task-01-<slug>/index.md`.
 
 Use the task template above with these changes:
 

@@ -107,7 +107,7 @@ void main() {
 
   group('TaskArchiver', () {
     for (final root in ['docs/backlog', 'planning/tasks']) {
-      test('moves the task to done/, marks it done and fixes the links under $root', () async {
+      test('closes tasks, then their story and epic once nothing is open, under $root', () async {
         final directory = _repo();
         void write(String path, String text) {
           File('${directory.path}/$path')
@@ -115,42 +115,93 @@ void main() {
             ..writeAsStringSync(text);
         }
 
-        final task = '$root/e/stories/01-s/01-a';
+        String task(String id, String title) =>
+            '---\nid: $id\nstatus: ready\ntype: feat\n---\n\n# $title\n\nStory: [S](../index.md)\n\n'
+            'Epic: [E](../../../index.md)\n\n## Acceptance\n\n- [ ] When x, then y.\n\n## Other\n\n- [ ] keep\n';
+        final epic = '$root/epic-e';
+        final one = '$epic/stories/story-01-one';
+        final two = '$epic/stories/story-02-two';
         write(
-          '$task/index.md',
-          '---\nid: E-01-01\nstatus: ready\ntype: feat\n---\n\n# Add a\n\nStory: [S](../index.md)\n\nMockup: [m](mockup.html)\n\n'
-              '## Acceptance\n\n- [ ] When x, then y.\n\n## Other\n\n- [ ] keep\n',
+          '$epic/index.md',
+          '# EPIC: E\n\n1. [One](stories/story-01-one/index.md)\n2. [Two](stories/story-02-two/index.md)\n',
         );
-        write('$task/mockup.html', '<html></html>');
-        write('$root/e/stories/01-s/index.md', '# Story\n\n1. [Add a](01-a/index.md)\n');
+        write(
+          '$one/index.md',
+          '# STORY 1\n\nEpic: [E](../../index.md)\n\n1. [A](task-01-a/index.md)\n2. [B](task-02-b/index.md)\n',
+        );
+        write('$two/index.md', '# STORY 2\n\nEpic: [E](../../index.md)\n\n1. [C](task-01-c/index.md)\n');
+        write('$one/task-01-a/index.md', task('E-01-01', 'Add a'));
+        write('$one/task-01-a/mockup.html', '<html></html>');
+        write('$one/task-02-b/index.md', task('E-01-02', 'Add b'));
+        write('$two/task-01-c/index.md', task('E-02-01', 'Add c'));
         _git(directory.path, ['add', '-A']);
         _git(directory.path, ['commit', '-q', '-m', 'seed']);
 
-        final parsed = Task.tryParse(
-          path: '$task/index.md',
-          text: File('${directory.path}/$task/index.md').readAsStringSync(),
-        );
-        if (parsed == null) fail('The sample task did not parse.');
-        final newDirectory = await TaskArchiver(workspace: directory.path, run: runSystemCommand, tasksDir: root)
-            .archive(
-              parsed,
-              notes: '## Summary\n\nDone.',
-            );
+        Future<String> archive(String path) async {
+          final parsed = Task.tryParse(
+            path: '$path/index.md',
+            text: File('${directory.path}/$path/index.md').readAsStringSync(),
+          );
+          if (parsed == null) fail('The sample task did not parse.');
+          final moved = await TaskArchiver(
+            workspace: directory.path,
+            run: runSystemCommand,
+            tasksDir: root,
+          ).archive(parsed, notes: '## Summary\n\nDone.');
+          _git(directory.path, ['add', '-A']);
+          _git(directory.path, ['commit', '-q', '-m', 'close']);
+          return moved;
+        }
 
-        expect(newDirectory, '$root/e/stories/01-s/done/01-a');
-        final index = File('${directory.path}/$newDirectory/index.md').readAsStringSync();
+        String read(String path) => File('${directory.path}/$path').readAsStringSync();
+
+        final a = await archive('$one/task-01-a');
+        expect(a, '$one/done/task-01-a');
+        final index = read('$a/index.md');
         expect(index, contains('status: done'));
         expect(index, contains('- [x] When x, then y.'));
         expect(index, contains('- [ ] keep'));
-        expect(index, contains('[S](../../index.md)'));
-        expect(index, contains('[m](mockup.html)'));
-        expect(File('${directory.path}/$newDirectory/notes.md').readAsStringSync(), contains('Done.'));
-        expect(
-          File('${directory.path}/$root/e/stories/01-s/index.md').readAsStringSync(),
-          contains('(done/01-a/index.md)'),
-        );
-        expect(Directory('${directory.path}/$task').existsSync(), isFalse);
+        expect(index, contains('Story: [S](../../index.md)'));
+        expect(read('$a/notes.md'), contains('Done.'));
+        expect(read('$one/index.md'), contains('(done/task-01-a/index.md)'));
+
+        final b = await archive('$one/task-02-b');
+        final closedOne = '$epic/stories/done/story-01-one';
+        expect(b, '$closedOne/done/task-02-b');
+        expect(Directory('${directory.path}/$one').existsSync(), isFalse);
+        expect(read('$epic/index.md'), contains('(stories/done/story-01-one/index.md)'));
+        expect(read('$closedOne/index.md'), contains('Epic: [E](../../../index.md)'));
+        expect(read('$closedOne/done/task-01-a/index.md'), contains('Epic: [E](../../../../../index.md)'));
+        expect(File('${directory.path}/$closedOne/done/task-01-a/mockup.html').existsSync(), isTrue);
+
+        final c = await archive('$two/task-01-c');
+        final closedEpic = '$root/done/epic-e';
+        expect(c, '$closedEpic/stories/done/story-02-two/done/task-01-c');
+        expect(Directory('${directory.path}/$epic').existsSync(), isFalse);
+        expect(read('$closedEpic/index.md'), contains('(stories/done/story-02-two/index.md)'));
+        expect(read('$c/index.md'), contains('Story: [S](../../index.md)'));
       });
     }
+
+    test('a standalone task moves to done/ with no story to close', () async {
+      final directory = _repo();
+      File('${directory.path}/docs/backlog/bugs/task-01-crash/index.md')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('---\nid: BUG-01\nstatus: ready\ntype: fix\n---\n\n# Fix crash\n');
+      _git(directory.path, ['add', '-A']);
+      _git(directory.path, ['commit', '-q', '-m', 'seed']);
+      final parsed = Task.tryParse(
+        path: 'docs/backlog/bugs/task-01-crash/index.md',
+        text: File('${directory.path}/docs/backlog/bugs/task-01-crash/index.md').readAsStringSync(),
+      );
+      if (parsed == null) fail('The sample task did not parse.');
+
+      final moved = await TaskArchiver(
+        workspace: directory.path,
+        run: runSystemCommand,
+      ).archive(parsed, notes: 'Done.');
+
+      expect(moved, 'docs/backlog/bugs/done/task-01-crash');
+    });
   });
 }

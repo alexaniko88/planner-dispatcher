@@ -71,6 +71,9 @@ class _Session {
   List<ReviewFinding> reviewNotes = const [];
   String checkResult = '';
 
+  /// Where the archiver moved the task folder, once it ran.
+  String? archivedDirectory;
+
   /// Commands the tool refused to run. They no longer stop the run: the stage
   /// goes on with another way, and the list is shown in the PR or the notes.
   final Set<String> deniedCommands = {};
@@ -232,7 +235,7 @@ class LaunchPipeline {
     final model = RoleModels.of(tool: tool, role: role, configModels: config.models, overrides: overrides);
     session.models[role] = model;
     log('stage ${role.name}: ${model.model}');
-    session.workspace.writeState(taskId: session.task.id, tool: tool.name, stage: role.name);
+    session.workspace.writeState(taskId: session.task.id, task: session.task.label, tool: tool.name, stage: role.name);
     final result = await stages.runStage(
       tool: tool,
       role: role,
@@ -307,7 +310,7 @@ class LaunchPipeline {
   /// Archives the task, scans for private data, pushes and opens the PR.
   Future<RunResult> _publish(_Session session) async {
     final task = session.task;
-    session.workspace.writeState(taskId: task.id, tool: tool.name, stage: 'publish');
+    session.workspace.writeState(taskId: task.id, task: task.label, tool: tool.name, stage: 'publish');
     final String archived;
     try {
       archived =
@@ -322,8 +325,9 @@ class LaunchPipeline {
     } on StateError catch (error) {
       return _safeAbandon(session, _Stop(RunOutcome.failed, error.message));
     }
+    session.archivedDirectory = archived;
     final closing = await session.publisher.commitAll(
-      subject: 'docs: close task ${task.id.toLowerCase()}',
+      subject: 'docs: close task ${task.id.toLowerCase()} ${task.slug}',
       trailer: 'Co-Authored-By: ${session.models[Role.implementer]?.attribution(tool) ?? tool.label}',
     );
     if (closing != null) return _safeAbandon(session, _Stop(RunOutcome.failed, closing));
@@ -384,12 +388,11 @@ class LaunchPipeline {
           );
     final task = session.task;
     final workspace = session.workspace.directory;
-    // The archiver may already have moved the task into its `done/` folder.
-    final oldFolder = '$workspace/${task.directory}';
-    final folder = Directory(oldFolder).existsSync() ? oldFolder : '$workspace/${task.doneDirectory}';
+    // The archiver may already have moved the task (and its story or epic) into `done/`.
+    final folder = '$workspace/${session.archivedDirectory ?? task.directory}';
     await File('$folder/notes.md').writeAsString('\n## Blocked\n\n${stop.message}\n', mode: FileMode.append);
     final error = await session.publisher.commitAll(
-      subject: 'wip: ${task.id.toLowerCase()} stopped',
+      subject: 'wip: ${task.id.toLowerCase()} ${task.slug} stopped',
       trailer: 'Co-Authored-By: ${session.models[Role.implementer]?.attribution(tool) ?? tool.label}',
     );
     final leaks = error == null

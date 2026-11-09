@@ -231,7 +231,7 @@ void main() {
   group('PrDescription', () {
     final task =
         Task.tryParse(
-          path: 'docs/backlog/e/stories/01-s/01-a/index.md',
+          path: 'docs/backlog/epic-e/stories/story-01-s/task-01-a/index.md',
           text:
               '---\nid: E-01-01\nstatus: ready\ntype: feat\n---\n\n# Add it\n\n## Acceptance\n\n- [ ] When x, then y. Check: test.\n',
         ) ??
@@ -254,7 +254,7 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'All checks passed.',
-        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/epic-e/stories/story-01-s/done/task-01-a/index.md',
       );
 
       expect(text, contains('- Adds it.'));
@@ -276,7 +276,7 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'ok',
-        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/epic-e/stories/story-01-s/done/task-01-a/index.md',
         deniedCommands: denied,
       );
 
@@ -284,7 +284,7 @@ void main() {
       expect(build(denied: ['python3 x.py']), allOf(contains('## Commands denied'), contains('- `python3 x.py`')));
     });
 
-    test('links the task at the head commit, under done/', () {
+    test('links the task by its title and id at the head commit, under done/', () {
       final text = PrDescription.build(
         task: task,
         implementer: report,
@@ -295,12 +295,14 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'ok',
-        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/epic-e/stories/story-01-s/done/task-01-a/index.md',
       );
 
       expect(
         text,
-        contains('[E-01-01](https://github.com/o/r/blob/head/docs/backlog/e/stories/01-s/done/01-a/index.md)'),
+        contains(
+          '[Add it (E-01-01)](https://github.com/o/r/blob/head/docs/backlog/epic-e/stories/story-01-s/done/task-01-a/index.md)',
+        ),
       );
     });
   });

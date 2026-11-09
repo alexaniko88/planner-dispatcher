@@ -19,16 +19,26 @@ Future<List<Task>> _load(Map<String, String> files) => TaskLoader(() async => fi
 
 void main() {
   group('Task', () {
-    test('reads the front matter and builds the branch name', () {
+    test('reads the front matter and builds the branch name and the label', () {
       final task = Task.tryParse(
-        path: 'docs/backlog/templates/stories/03-own/02-store-custom/index.md',
-        text: _task(id: 'TPL-03-02', dependsOn: '[TPL-03-01]'),
+        path: 'docs/backlog/epic-templates/stories/story-03-own/task-02-store-custom/index.md',
+        text: _task(id: 'TPL-03-02', dependsOn: '[TPL-03-01]', title: 'Store custom templates'),
       );
 
       expect(task?.id, 'TPL-03-02');
       expect(task?.dependsOn, ['TPL-03-01']);
       expect(task?.branch, 'feat/tpl-03-02-store-custom');
+      expect(task?.label, 'Store custom templates (TPL-03-02)');
       expect(task?.isDone, isFalse);
+    });
+
+    test('a task folder in the older layout keeps the same branch name', () {
+      final task = Task.tryParse(
+        path: 'docs/backlog/templates/stories/03-own/02-store-custom/index.md',
+        text: _task(id: 'TPL-03-02'),
+      );
+
+      expect(task?.branch, 'feat/tpl-03-02-store-custom');
     });
 
     test('a scalar depends-on is a one-item list, and unindented block items are read', () {
@@ -45,13 +55,21 @@ void main() {
       expect(Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
     });
 
-    test('a task under done/ is done', () {
-      final task = Task.tryParse(
-        path: 'docs/backlog/x/stories/01-s/done/01-t/index.md',
-        text: _task(id: 'X-01-01'),
-      );
-
-      expect(task?.isDone, isTrue);
+    test('a task under done/ is done, also when its story or epic is closed', () {
+      for (final path in [
+        'docs/backlog/epic-x/stories/story-01-s/done/task-01-t/index.md',
+        'docs/backlog/epic-x/stories/done/story-01-s/done/task-01-t/index.md',
+        'docs/backlog/done/epic-x/stories/done/story-01-s/done/task-01-t/index.md',
+      ]) {
+        expect(
+          Task.tryParse(
+            path: path,
+            text: _task(id: 'X-01-01'),
+          )?.isDone,
+          isTrue,
+          reason: path,
+        );
+      }
     });
   });
 

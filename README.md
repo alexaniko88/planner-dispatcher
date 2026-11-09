@@ -59,6 +59,8 @@ Run each from the project root.
 - `<dart> run planner_dispatcher:dispatcher status`: print the state of the runs.
 - `<dart> run planner_dispatcher:sync`: switch to the base branch, pull it and delete merged local branches.
 - `<dart> run planner_dispatcher:install`: install or update the library files.
+- `<dart> run planner_dispatcher:backlog close-finished`: move every story whose tasks are all done, and every epic whose stories are all done, into `done/`, fixing the links. The planner runs it on its branch.
+- `<dart> run planner_dispatcher:backlog reopen <path>`: move a closed story or epic, and its closed epic, back out of `done/`. The planner runs it before adding a task to closed work.
 
 ## Updating
 

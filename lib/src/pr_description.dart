@@ -35,7 +35,7 @@ class PrDescription {
       '',
       implementer.summary.isEmpty ? task.title : implementer.summary,
       '',
-      'Task: [${task.id}]($blob/$headSha/$taskPath)',
+      'Task: [${task.label}]($blob/$headSha/$taskPath)',
       '',
       '## Acceptance',
       '',

@@ -95,6 +95,7 @@ Future<List<String>> _branchNames() async {
 Map<String, Object?> _taskJson(Task task) => {
   'id': task.id,
   'title': task.title,
+  'label': task.label,
   'path': task.indexPath,
   'type': task.type,
   'complexity': task.complexity,
@@ -116,12 +117,12 @@ Future<int> _next(List<String> args) async {
   final candidates = selector.candidates(skipped: skipped);
   final waiting = {
     for (final task in tasks)
-      if (task.isReady && !candidates.contains(task)) task.id: selector.blockReason(task, skipped: skipped),
+      if (task.isReady && !candidates.contains(task)) task.label: selector.blockReason(task, skipped: skipped),
   };
   stdout.writeln(
     const JsonEncoder.withIndent('  ').convert({
       'next': candidates.isEmpty ? null : _taskJson(candidates.first),
-      'alsoReady': [for (final task in candidates.skip(1)) task.id],
+      'alsoReady': [for (final task in candidates.skip(1)) task.label],
       'waiting': waiting,
     }),
   );

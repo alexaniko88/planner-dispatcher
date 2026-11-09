@@ -15,7 +15,7 @@ import 'package:planner_dispatcher/src/stage_runner.dart';
 import 'package:planner_dispatcher/src/task.dart';
 import 'package:planner_dispatcher/src/tool_command.dart';
 
-const _taskDirectory = 'docs/backlog/tst/stories/01-s/01-do-thing';
+const _taskDirectory = 'docs/backlog/epic-tst/stories/story-01-s/task-01-do-thing';
 const _branch = 'feat/tst-01-01-do-thing';
 
 String _git(String directory, List<String> args) {
@@ -175,12 +175,12 @@ void main() {
     expect(result.prUrl, 'https://github.com/owner/repo/pull/1');
     expect(
       fixture.originLog(_branch).split('\n'),
-      ['docs: close task tst-01-01', 'test: add x tests', 'feat: add x', 'seed'],
+      ['docs: close task tst-01-01 do-thing', 'test: add x tests', 'feat: add x', 'seed'],
     );
     expect(_git(fixture.origin, ['log', '-1', '--format=%B', _branch]), contains('Co-Authored-By: Claude Sonnet 5.5'));
     final files = _git(fixture.origin, ['ls-tree', '-r', '--name-only', _branch]);
-    expect(files, contains('docs/backlog/tst/stories/01-s/done/01-do-thing/index.md'));
-    expect(files, contains('docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md'));
+    expect(files, contains('docs/backlog/done/epic-tst/stories/done/story-01-s/done/task-01-do-thing/index.md'));
+    expect(files, contains('docs/backlog/done/epic-tst/stories/done/story-01-s/done/task-01-do-thing/notes.md'));
     expect(files, isNot(contains('$_taskDirectory/index.md')));
     expect(fixture.ghCalls.single, containsAllInOrder(['--head', _branch, '--title', 'feat: do thing']));
     expect(Directory('${fixture.runs}/TST-01-01').existsSync(), isFalse);
@@ -229,7 +229,7 @@ void main() {
 
     expect(result.outcome, RunOutcome.blocked);
     expect(result.message, 'Which storage should I use?');
-    expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 stopped');
+    expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 do-thing stopped');
     expect(
       _git(fixture.origin, ['show', '$_branch:$_taskDirectory/notes.md']),
       contains('Which storage should I use?'),
@@ -261,7 +261,7 @@ void main() {
     expect(result.outcome, RunOutcome.blocked);
     expect(reviews, 2);
     expect(result.message, contains('Wrong layer'));
-    expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 stopped');
+    expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 do-thing stopped');
     expect(fixture.ghCalls, isEmpty);
   });
 
@@ -319,7 +319,7 @@ void main() {
     expect(result.outcome, RunOutcome.pullRequest);
     final notes = _git(
       fixture.origin,
-      ['show', '$_branch:docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md'],
+      ['show', '$_branch:docs/backlog/done/epic-tst/stories/done/story-01-s/done/task-01-do-thing/notes.md'],
     );
     expect(notes, contains('## Commands denied'));
     expect(notes, contains('- `python3 script.py`'));
@@ -520,7 +520,7 @@ void main() {
 
       expect(result.outcome, RunOutcome.failed);
       expect(result.message, contains('Unexpected error'));
-      expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 stopped');
+      expect(fixture.originLog(_branch).split('\n').first, 'wip: tst-01-01 do-thing stopped');
       expect(Directory('${fixture.runs}/TST-01-01').existsSync(), isFalse);
     });
 
@@ -553,7 +553,10 @@ void main() {
 
       expect(result.outcome, RunOutcome.failed);
       expect(result.message, contains('commit refused'));
-      final notes = _git(fixture.origin, ['show', '$_branch:docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md']);
+      final notes = _git(fixture.origin, [
+        'show',
+        '$_branch:docs/backlog/done/epic-tst/stories/done/story-01-s/done/task-01-do-thing/notes.md',
+      ]);
       expect(notes, contains('## Blocked'));
       expect(notes, contains('commit refused'));
     });
