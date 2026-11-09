@@ -1,6 +1,6 @@
 name: planner_dispatcher
 description: Plan work into tasks an AI runner can implement without asking, and dispatch those tasks to Claude, Codex or Antigravity, one clean clone and one pull request per task.
-version: 0.0.0
+version: 0.1.0
 repository: https://github.com/alexaniko88/planner-dispatcher
 publish_to: none
 

@@ -19,7 +19,7 @@ The install command with its starters, the release action that tags versions, an
 ## Tasks
 
 1. [PD-03-01: Install command](done/01-install-command/index.md).
-2. [PD-03-02: Release action and README](02-release-and-readme/index.md).
+2. [PD-03-02: Release action and README](done/02-release-and-readme/index.md).
 
 ## Dependencies and open decisions
 

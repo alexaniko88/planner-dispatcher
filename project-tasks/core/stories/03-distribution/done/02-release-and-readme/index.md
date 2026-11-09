@@ -1,6 +1,6 @@
 ---
 id: PD-03-02
-status: ready
+status: done
 type: feat
 complexity: low
 depends-on: [PD-03-01]
@@ -17,9 +17,9 @@ skills: []
 
 # Release action and README
 
-Story: [Distribution](../index.md)
+Story: [Distribution](../../index.md)
 
-Epic: [Standalone planner and dispatcher](../../../index.md)
+Epic: [Standalone planner and dispatcher](../../../../index.md)
 
 ## Goal
 
