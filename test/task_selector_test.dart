@@ -21,7 +21,7 @@ void main() {
   group('Task', () {
     test('reads the front matter and builds the branch name', () {
       final task = Task.tryParse(
-        path: 'project-tasks/templates/stories/03-own/02-store-custom/index.md',
+        path: 'docs/backlog/templates/stories/03-own/02-store-custom/index.md',
         text: _task(id: 'TPL-03-02', dependsOn: '[TPL-03-01]'),
       );
 
@@ -33,7 +33,7 @@ void main() {
 
     test('a scalar depends-on is a one-item list, and unindented block items are read', () {
       final task = Task.tryParse(
-        path: 'project-tasks/x/stories/01-s/01-t/index.md',
+        path: 'docs/backlog/x/stories/01-s/01-t/index.md',
         text: '---\nid: X-01-01\ndepends-on: TPL-01-01\ntouches:\n- lib/a.dart\n---\n\n# T\n',
       );
 
@@ -42,12 +42,12 @@ void main() {
     });
 
     test('an epic or story index without an id is not a task', () {
-      expect(Task.tryParse(path: 'project-tasks/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
+      expect(Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
     });
 
     test('a task under done/ is done', () {
       final task = Task.tryParse(
-        path: 'project-tasks/x/stories/01-s/done/01-t/index.md',
+        path: 'docs/backlog/x/stories/01-s/done/01-t/index.md',
         text: _task(id: 'X-01-01'),
       );
 
@@ -58,9 +58,9 @@ void main() {
   group('TaskLoader', () {
     test('keeps only tasks and sorts them by path', () async {
       final tasks = await _load({
-        'project-tasks/b/stories/01-s/01-t/index.md': _task(id: 'B-01-01'),
-        'project-tasks/a/index.md': '---\nabbr: A\n---\n# Epic\n',
-        'project-tasks/a/stories/01-s/01-t/index.md': _task(id: 'A-01-01'),
+        'docs/backlog/b/stories/01-s/01-t/index.md': _task(id: 'B-01-01'),
+        'docs/backlog/a/index.md': '---\nabbr: A\n---\n# Epic\n',
+        'docs/backlog/a/stories/01-s/01-t/index.md': _task(id: 'A-01-01'),
       });
 
       expect(tasks.map((task) => task.id), ['A-01-01', 'B-01-01']);
@@ -68,7 +68,7 @@ void main() {
   });
 
   group('TaskSelector', () {
-    const root = 'project-tasks/e/stories/01-s';
+    const root = 'docs/backlog/e/stories/01-s';
 
     test('a draft task is never offered', () async {
       final tasks = await _load({'$root/01-a/index.md': _task(id: 'E-01-01', status: 'draft')});

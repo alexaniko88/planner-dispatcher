@@ -65,7 +65,11 @@ Future<String> _output(String executable, List<String> args) async {
 
 Future<List<Task>> _tasksOnBase() async {
   await runSystemCommand('git', ['fetch', 'origin', _config.baseBranch, '--quiet']);
-  return TaskLoader.fromGit(ref: 'origin/${_config.baseBranch}', run: runSystemCommand).load();
+  return TaskLoader.fromGit(
+    ref: 'origin/${_config.baseBranch}',
+    run: runSystemCommand,
+    root: _config.tasksDir,
+  ).load();
 }
 
 /// The branches on the remote and the heads of the open PRs.

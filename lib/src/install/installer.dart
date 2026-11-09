@@ -46,7 +46,10 @@ class Installer {
   const Installer({required this.projectRoot, required this.packageRoot});
 
   static const _skills = ['skill-dispatcher', 'skill-planner'];
-  static const _formatRule = '.agents/rules/project-tasks-format.md';
+  static const _formatRule = '.agents/rules/backlog-format.md';
+
+  /// The format rule's name before it was renamed; install removes it.
+  static const _oldFormatRule = '.agents/rules/project-tasks-format.md';
   static const _tempSuffix = '.install-tmp';
   static const _startersFolder = '.agents/planner-dispatcher/.starters';
 
@@ -82,6 +85,7 @@ class Installer {
     }
     _replaceFile(_package(_formatRule), _project(_formatRule));
     written.add(_formatRule);
+    _delete(_project(_oldFormatRule));
 
     for (final name in _skills) {
       final link = '.claude/skills/$name';

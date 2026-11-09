@@ -4,7 +4,7 @@ Use this process for the interview and its UI follow-ups. The aim is complete re
 
 ## Keep one working record
 
-Use the location and lifecycle in [the task format rule](../../../rules/project-tasks-format.md#interview-record). Create the record after workspace preparation, before the first interview question. Do not create backlog indexes before the split is agreed.
+Use the location and lifecycle in [the task format rule](../../../rules/backlog-format.md#interview-record). Create the record after workspace preparation, before the first interview question. Do not create backlog indexes before the split is agreed.
 
 Keep these short sections:
 
@@ -41,7 +41,7 @@ Ask only when all three are true:
 
 Investigate discoverable facts yourself. Leave routine implementation choices to verified project patterns and record the pattern when relevant. Never replace an unresolved product choice with an assumed default. Put later ideas outside current scope, preserving their provisional status.
 
-Prioritize contradictions, decisions that block other decisions, high-impact unknowns, then remaining relevant gaps. Recompute after each answer rather than following a fixed questionnaire. Each question addresses one decision, even if several alternatives are offered. Use the skill's communication rules; never compress multiple decisions into a large question to save turns.
+Prioritize contradictions, decisions that block other decisions, high-impact unknowns, then remaining relevant gaps. Recompute after each answer rather than following a fixed questionnaire. Each question addresses one decision, with at most three offered answers, one of them recommended, plus a typed answer. Use the skill's communication rules; never compress multiple decisions into a large question to save turns.
 
 After the answer, save it and update affected coverage. Check for contradictions, new scenarios and reopened decisions. Ask for clarification if the reply is ambiguous. Do not manufacture a reason the user did not give. Existing facts, recommendations and confirmed decisions remain distinct.
 

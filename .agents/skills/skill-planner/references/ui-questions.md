@@ -11,7 +11,7 @@ Before you ask anything, read what exists and use it as the starting point:
 - The theme files, tokens and shared widgets named in `## UI sources`.
 - The styling rules in the config's `rules` files.
 
-Do not ask the user for a design. Propose the layout from the existing screens and ask only what you cannot see. One short question at a time, about one thing only, with a recommendation only when evidence supports it (see "Talking to the user" in the skill).
+Do not ask the user for a design. Propose the layout from the existing screens and ask only what you cannot see. One short question at a time, about one thing only, with up to three options and a recommended one (see "Talking to the user" in the skill).
 
 ## What to settle
 

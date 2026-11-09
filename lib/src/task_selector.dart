@@ -2,7 +2,7 @@ import 'extensions/touch_paths.dart';
 import 'task.dart';
 
 /// Chooses which task can start next, from the rules in
-/// `.agents/rules/project-tasks-format.md` ("State is deduced").
+/// `.agents/rules/backlog-format.md` ("State is deduced").
 class TaskSelector {
   final List<Task> tasks;
   final Set<String> busyIds;

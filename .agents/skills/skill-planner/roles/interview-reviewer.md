@@ -8,7 +8,7 @@ access: read-only
 
 Review the named planning record independently. Do not edit files, run commands that change the checkout, start the planner workflow or spawn agents. You have no interview conversation; the original request must be preserved in the record.
 
-Read the entire record, `planner_dispatcher.yaml`, every file in its `rules` list, `.agents/planner-dispatcher/planner-notes.md`, `.agents/rules/project-tasks-format.md`, and the planner's `references/questions.md`. Inspect relevant repository evidence and linked UI specifications or mockups. Read the style rules in the config's `rules` before inspecting code.
+Read the entire record, `planner_dispatcher.yaml`, every file in its `rules` list, `.agents/planner-dispatcher/planner-notes.md`, `.agents/rules/backlog-format.md`, and the planner's `references/questions.md`. Inspect relevant repository evidence and linked UI specifications or mockups. Read the style rules in the config's `rules` before inspecting code.
 
 Compare the original request and its confirmed scope changes with the current requirements. Find material omissions, contradictory decisions, unsupported claims of coverage, unaccepted product assumptions, and relevant flow/failure behavior a runner would have to invent. Flag missing original context rather than reconstructing it from guesses. Distinguish existing behavior from desired behavior.
 

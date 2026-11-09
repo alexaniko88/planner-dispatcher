@@ -310,10 +310,15 @@ class LaunchPipeline {
     session.workspace.writeState(taskId: task.id, tool: tool.name, stage: 'publish');
     final String archived;
     try {
-      archived = await TaskArchiver(workspace: session.workspace.directory, run: run).archive(
-        task,
-        notes: _notes(session),
-      );
+      archived =
+          await TaskArchiver(
+            workspace: session.workspace.directory,
+            run: run,
+            tasksDir: config.tasksDir,
+          ).archive(
+            task,
+            notes: _notes(session),
+          );
     } on StateError catch (error) {
       return _safeAbandon(session, _Stop(RunOutcome.failed, error.message));
     }

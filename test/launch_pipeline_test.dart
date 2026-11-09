@@ -15,7 +15,7 @@ import 'package:planner_dispatcher/src/stage_runner.dart';
 import 'package:planner_dispatcher/src/task.dart';
 import 'package:planner_dispatcher/src/tool_command.dart';
 
-const _taskDirectory = 'project-tasks/tst/stories/01-s/01-do-thing';
+const _taskDirectory = 'docs/backlog/tst/stories/01-s/01-do-thing';
 const _branch = 'feat/tst-01-01-do-thing';
 
 String _git(String directory, List<String> args) {
@@ -179,8 +179,8 @@ void main() {
     );
     expect(_git(fixture.origin, ['log', '-1', '--format=%B', _branch]), contains('Co-Authored-By: Claude Sonnet 5.5'));
     final files = _git(fixture.origin, ['ls-tree', '-r', '--name-only', _branch]);
-    expect(files, contains('project-tasks/tst/stories/01-s/done/01-do-thing/index.md'));
-    expect(files, contains('project-tasks/tst/stories/01-s/done/01-do-thing/notes.md'));
+    expect(files, contains('docs/backlog/tst/stories/01-s/done/01-do-thing/index.md'));
+    expect(files, contains('docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md'));
     expect(files, isNot(contains('$_taskDirectory/index.md')));
     expect(fixture.ghCalls.single, containsAllInOrder(['--head', _branch, '--title', 'feat: do thing']));
     expect(Directory('${fixture.runs}/TST-01-01').existsSync(), isFalse);
@@ -319,7 +319,7 @@ void main() {
     expect(result.outcome, RunOutcome.pullRequest);
     final notes = _git(
       fixture.origin,
-      ['show', '$_branch:project-tasks/tst/stories/01-s/done/01-do-thing/notes.md'],
+      ['show', '$_branch:docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md'],
     );
     expect(notes, contains('## Commands denied'));
     expect(notes, contains('- `python3 script.py`'));
@@ -553,7 +553,7 @@ void main() {
 
       expect(result.outcome, RunOutcome.failed);
       expect(result.message, contains('commit refused'));
-      final notes = _git(fixture.origin, ['show', '$_branch:project-tasks/tst/stories/01-s/done/01-do-thing/notes.md']);
+      final notes = _git(fixture.origin, ['show', '$_branch:docs/backlog/tst/stories/01-s/done/01-do-thing/notes.md']);
       expect(notes, contains('## Blocked'));
       expect(notes, contains('commit refused'));
     });

@@ -14,7 +14,7 @@ You are an engineer who must implement one task of this repository and cannot as
 - Its story and epic indexes.
 - Its upstream task contracts, and named consumer/assembly contracts where needed to check the pieces fit. Proposed fixed contracts may precede implementation; report missing decisions, not the mere absence of code explicitly planned in a dependency.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`, sections Common and Tests, for executable validation boundaries.
-- `planner_dispatcher.yaml`, every file in its `rules` list, `.agents/planner-dispatcher/planner-notes.md` and `.agents/rules/project-tasks-format.md`.
+- `planner_dispatcher.yaml`, every file in its `rules` list, `.agents/planner-dispatcher/planner-notes.md` and `.agents/rules/backlog-format.md`.
 - Every file, folder and golden image the task names, and the code around what it changes.
 
 ## Look for

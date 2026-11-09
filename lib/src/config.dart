@@ -27,6 +27,7 @@ class DispatcherConfig {
   final List<List<String>> check;
   final List<List<String>> allowedCommands;
   final List<String> rules;
+  final String tasksDir;
   final String? goldensDir;
   final List<String> commitTypes;
   final String? gitEmailSuffix;
@@ -41,6 +42,7 @@ class DispatcherConfig {
     required this.check,
     required this.rules,
     required this.commitTypes,
+    this.tasksDir = defaultTasksDir,
     this.allowedCommands = const [],
     this.goldensDir,
     this.gitEmailSuffix,
@@ -50,6 +52,9 @@ class DispatcherConfig {
 
   static const fileName = 'planner_dispatcher.yaml';
 
+  /// Where the backlog lives when `tasks_dir` is not set.
+  static const defaultTasksDir = 'docs/backlog';
+
   static const _keys = {
     'dart',
     'base_branch',
@@ -58,6 +63,7 @@ class DispatcherConfig {
     'check',
     'allowed_commands',
     'rules',
+    'tasks_dir',
     'goldens_dir',
     'commit_types',
     'git_email_suffix',
@@ -67,6 +73,7 @@ class DispatcherConfig {
 
   static final _runFolder = RegExp(r'^[A-Za-z0-9._-]+$');
   static final _commitType = RegExp(r'^[a-z]+$');
+  static final _tasksDir = RegExp(r'^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$');
   static const _modelFields = {'model', 'effort', 'name'};
 
   /// Reads and checks the config file at [path]. Throws [ConfigError].
@@ -95,6 +102,10 @@ class DispatcherConfig {
     if (!_runFolder.hasMatch(runFolder)) {
       throw ConfigError('run_folder', 'must match ${_runFolder.pattern}');
     }
+    final tasksDir = root.containsKey('tasks_dir') ? _string(root, 'tasks_dir') : defaultTasksDir;
+    if (!_tasksDir.hasMatch(tasksDir) || tasksDir.split('/').any((part) => part == '.' || part == '..')) {
+      throw const ConfigError('tasks_dir', 'must be a relative folder path without . or ..');
+    }
     final check = _commands(root, 'check');
     if (check.isEmpty) throw const ConfigError('check', 'must not be empty');
     final commitTypes = _strings(root, 'commit_types');
@@ -113,6 +124,7 @@ class DispatcherConfig {
       check: check,
       allowedCommands: root.containsKey('allowed_commands') ? _commands(root, 'allowed_commands') : const [],
       rules: _strings(root, 'rules'),
+      tasksDir: tasksDir,
       goldensDir: root.containsKey('goldens_dir') ? _string(root, 'goldens_dir') : null,
       commitTypes: commitTypes,
       gitEmailSuffix: root.containsKey('git_email_suffix') ? _string(root, 'git_email_suffix') : null,

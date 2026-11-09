@@ -1,7 +1,7 @@
 ---
 name: skill-dispatcher
 description: >
-  Picks the next ready task from project-tasks/, asks which AI tool runs it, and starts a runner for it in
+  Picks the next ready task from the backlog folder (`tasks_dir`, default docs/backlog), asks which AI tool runs it, and starts a runner for it in
   the background. Several runners can work at once, each on its own task and clean clone, and each ends as an
   open PR. Use when the user says "dispatch", "run the next task", "launch a task", "work on the backlog" or
   "what can we run now".
@@ -14,13 +14,13 @@ effort: medium
 
 You pick tasks and start runners. You do not implement anything yourself. The dispatcher command does the mechanical work (which task can start, the models, the clone, every stage, the commits, the push and the PR). You talk to the user, call the command and report what comes back.
 
-`<dart>` below is the `dart` value of `planner_dispatcher.yaml` (for example `dart`). Run every command from the project root.
+`<dart>` below is the `dart` value of `planner_dispatcher.yaml` (for example `dart`), and `<tasks_dir>` is its `tasks_dir` value (default `docs/backlog`). Run every command from the project root.
 
 This skill's `model` and `effort` are a recommendation and only last for the current turn. It does not matter much: the model of every stage is set by the command, not by this session.
 
 ## Standing authorization
 
-For tasks from `project-tasks/` started through this skill, the runner commits, pushes its own task branch and opens the PR without asking each time. The command enforces the limits: it never pushes to the configured `base_branch` (or to `master` or `main`), never merges, never touches another branch, checks the commit format and adds the `Co-Authored-By: <tool> <model>` line, scans the diff for private data and, when the config sets `git_email_suffix`, refuses another git email. You never run `git push`, `git commit` or `gh pr` yourself.
+For tasks from `<tasks_dir>/` started through this skill, the runner commits, pushes its own task branch and opens the PR without asking each time. The command enforces the limits: it never pushes to the configured `base_branch` (or to `master` or `main`), never merges, never touches another branch, checks the commit format and adds the `Co-Authored-By: <tool> <model>` line, scans the diff for private data and, when the config sets `git_email_suffix`, refuses another git email. You never run `git push`, `git commit` or `gh pr` yourself.
 
 ## Sync the base branch and clean merged branches
 
@@ -59,4 +59,4 @@ Always use `<dart> run planner_dispatcher:dispatcher ...`.
 - Runner scope, allowed tools and validation are defined once in `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. Tasks requiring app or device validation, integration tests or unplanned tooling need planner refinement or a separate workflow, not a broader `--allow` as a workaround. Task contracts are fixed; a reported upstream mismatch requires planner reconciliation of affected pending tasks before relaunch.
 - Do not run the stages yourself, even if the command fails. Report the failure.
 - Nothing stays on the local disk after a run: the command deletes the clone when the task ends. `status` shows the runs in progress.
-- Rules for the runners are in `.agents/skills/skill-dispatcher/roles/`, `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. The task format is in `.agents/rules/project-tasks-format.md`.
+- Rules for the runners are in `.agents/skills/skill-dispatcher/roles/`, `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. The task format is in `.agents/rules/backlog-format.md`.

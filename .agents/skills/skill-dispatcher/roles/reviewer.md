@@ -13,7 +13,7 @@ You review the work of one task and stop. Never edit any file, never run `git ad
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Review checks".
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Review checks".
-- `.agents/rules/project-tasks-format.md`.
+- `.agents/rules/backlog-format.md`.
 - The task `index.md` named in your brief: the contract, goal, behavior, decisions, out of scope, files/tests and acceptance criteria. Read linked shared contracts and named consumer/assembly ownership.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).
 - The diff: `git diff origin/<base_branch>...HEAD` (`base_branch` from `planner_dispatcher.yaml`). Review the changed non-test files. When the diff has no source files, review every changed file (docs, tooling and tests included).

@@ -30,6 +30,9 @@ allowed_commands:
 rules:
   - CLAUDE.md
 
+# Where the planner writes the epics, stories and tasks, relative to the project root.
+# tasks_dir: docs/backlog
+
 # Changed .png files in this folder get before/after images in the pull request.
 # goldens_dir: test/snapshots/goldens
 

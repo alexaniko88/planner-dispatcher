@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'command_runner.dart';
+import 'config.dart';
 import 'extensions/posix_path.dart';
 import 'task.dart';
 
@@ -10,7 +11,10 @@ class TaskArchiver {
   final String workspace;
   final RunCommand run;
 
-  const TaskArchiver({required this.workspace, required this.run});
+  /// The backlog folder (`tasks_dir`), relative to [workspace].
+  final String tasksDir;
+
+  const TaskArchiver({required this.workspace, required this.run, this.tasksDir = DispatcherConfig.defaultTasksDir});
 
   static final _link = RegExp(r'\]\(([^)\s]+)\)');
 
@@ -57,7 +61,7 @@ class TaskArchiver {
   }
 
   void _fixLinksInOtherFiles({required String oldDirectory, required String newDirectory}) {
-    final root = Directory('$workspace/project-tasks');
+    final root = Directory('$workspace/$tasksDir');
     if (!root.existsSync()) return;
     for (final entity in root.listSync(recursive: true, followLinks: false)) {
       if (entity is! File || !entity.path.endsWith('.md')) continue;

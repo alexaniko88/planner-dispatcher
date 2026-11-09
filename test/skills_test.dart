@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 const _dispatcherFolder = '.agents/skills/skill-dispatcher';
 const _plannerFolder = '.agents/skills/skill-planner';
-const _formatRule = '.agents/rules/project-tasks-format.md';
+const _formatRule = '.agents/rules/backlog-format.md';
 const _accessModes = {'read-only', 'edit'};
 const _plannerNotesHeadings = [
   '## Branches and pull requests',
@@ -22,7 +22,7 @@ const _readOrder = [
   'planner_dispatcher.yaml',
   'runner-rules.md',
   '.agents/planner-dispatcher/project-overrides.md',
-  'project-tasks-format.md',
+  'backlog-format.md',
 ];
 
 // A project build or test command must not appear in shipped dispatcher files.

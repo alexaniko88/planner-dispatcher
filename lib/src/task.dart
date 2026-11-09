@@ -1,8 +1,8 @@
 import 'extensions/front_matter_text.dart';
 import 'extensions/markdown_sections.dart';
 
-/// One task folder of `project-tasks/`, as described in
-/// `.agents/rules/project-tasks-format.md`.
+/// One task folder of the backlog (`tasks_dir`), as described in
+/// `.agents/rules/backlog-format.md`.
 class Task {
   final String id;
   final String status;

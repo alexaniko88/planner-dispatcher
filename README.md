@@ -2,7 +2,7 @@
 
 A planner and a dispatcher for AI coding tools, for Flutter and Dart projects.
 
-- The **planner** turns an idea into small, concrete tasks under `project-tasks/` that a runner can implement without asking anything.
+- The **planner** turns an idea into small, concrete tasks under `docs/backlog/` (set by `tasks_dir`) that a runner can implement without asking anything.
 - The **dispatcher** runs ready tasks with Claude, Codex or Antigravity: one clean clone per task, an implementer, a tests stage, the project checks and a review, ending as one pull request.
 
 ## Requirements
@@ -29,7 +29,7 @@ A planner and a dispatcher for AI coding tools, for Flutter and Dart projects.
 4. Fill `planner_dispatcher.yaml` and the two project files `.agents/planner-dispatcher/project-overrides.md` and `.agents/planner-dispatcher/planner-notes.md`.
 5. Commit the result.
 
-Install copies the library-owned files (`.agents/skills/skill-dispatcher/`, `.agents/skills/skill-planner/`, `.agents/rules/project-tasks-format.md` and the two `.claude/skills/` links) and creates the three project files only when they are missing. It never overwrites a project file.
+Install copies the library-owned files (`.agents/skills/skill-dispatcher/`, `.agents/skills/skill-planner/`, `.agents/rules/backlog-format.md` and the two `.claude/skills/` links) and creates the three project files only when they are missing. It never overwrites a project file.
 
 ## Config
 
@@ -42,6 +42,7 @@ Install copies the library-owned files (`.agents/skills/skill-dispatcher/`, `.ag
 - `check`: required, at least one. Commands run in order after implementation; all must exit 0.
 - `allowed_commands`: optional, default none. Extra command prefixes the Claude implementer and tests stages may run.
 - `rules`: required, may be empty. Project files every role and the planner read first.
+- `tasks_dir`: optional, default `docs/backlog`. The backlog folder, relative to the project root: the planner writes the epics, stories and tasks there and the dispatcher reads them from it. A project that already uses `project-tasks/` sets `tasks_dir: project-tasks`.
 - `goldens_dir`: optional, default unset. Changed `.png` files there get before/after images in the pull request.
 - `commit_types`: required. The commit types allowed in commit subjects.
 - `git_email_suffix`: optional, default unset (any email). When set, launch refuses another git email.

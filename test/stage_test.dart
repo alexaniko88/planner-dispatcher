@@ -160,10 +160,10 @@ void main() {
     });
 
     test('the prompt names the role file and the task', () {
-      final prompt = StageRunner.prompt(role: Role.tests, taskPath: 'project-tasks/x/index.md');
+      final prompt = StageRunner.prompt(role: Role.tests, taskPath: 'docs/backlog/x/index.md');
 
       expect(prompt, contains('.agents/skills/skill-dispatcher/roles/tests.md'));
-      expect(prompt, contains('project-tasks/x/index.md'));
+      expect(prompt, contains('docs/backlog/x/index.md'));
     });
   });
 
@@ -231,7 +231,7 @@ void main() {
   group('PrDescription', () {
     final task =
         Task.tryParse(
-          path: 'project-tasks/e/stories/01-s/01-a/index.md',
+          path: 'docs/backlog/e/stories/01-s/01-a/index.md',
           text:
               '---\nid: E-01-01\nstatus: ready\ntype: feat\n---\n\n# Add it\n\n## Acceptance\n\n- [ ] When x, then y. Check: test.\n',
         ) ??
@@ -254,7 +254,7 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'All checks passed.',
-        taskPath: 'project-tasks/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
       );
 
       expect(text, contains('- Adds it.'));
@@ -276,7 +276,7 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'ok',
-        taskPath: 'project-tasks/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
         deniedCommands: denied,
       );
 
@@ -295,12 +295,12 @@ void main() {
         baseSha: 'base',
         headSha: 'head',
         checkResult: 'ok',
-        taskPath: 'project-tasks/e/stories/01-s/done/01-a/index.md',
+        taskPath: 'docs/backlog/e/stories/01-s/done/01-a/index.md',
       );
 
       expect(
         text,
-        contains('[E-01-01](https://github.com/o/r/blob/head/project-tasks/e/stories/01-s/done/01-a/index.md)'),
+        contains('[E-01-01](https://github.com/o/r/blob/head/docs/backlog/e/stories/01-s/done/01-a/index.md)'),
       );
     });
   });

@@ -29,6 +29,7 @@ allowed_commands:
   - fvm dart format
 rules:
   - CLAUDE.md
+tasks_dir: planning/tasks
 goldens_dir: test/goldens
 commit_types: [feat, fix, docs]
 git_email_suffix: "@users.noreply.github.com"
@@ -81,6 +82,7 @@ void main() {
       ['fvm', 'dart', 'format'],
     ]);
     expect(config.rules, ['CLAUDE.md']);
+    expect(config.tasksDir, 'planning/tasks');
     expect(config.goldensDir, 'test/goldens');
     expect(config.commitTypes, ['feat', 'fix', 'docs']);
     expect(config.gitEmailSuffix, '@users.noreply.github.com');
@@ -96,6 +98,7 @@ void main() {
     expect(config.setup, isEmpty);
     expect(config.allowedCommands, isEmpty);
     expect(config.rules, isEmpty);
+    expect(config.tasksDir, 'docs/backlog');
     expect(config.goldensDir, isNull);
     expect(config.gitEmailSuffix, isNull);
     expect(config.privatePatterns, isEmpty);
@@ -138,8 +141,8 @@ void main() {
 
   test('an unknown top-level key is refused', () {
     expect(
-      () => DispatcherConfig.parse(_with('tasks_dir', 'tasks_dir: tasks')),
-      throwsA(_error('tasks_dir', 'unknown key')),
+      () => DispatcherConfig.parse(_with('backlog', 'backlog: tasks')),
+      throwsA(_error('backlog', 'unknown key')),
     );
   });
 
@@ -189,6 +192,16 @@ void main() {
       () => DispatcherConfig.parse(_with('check', 'check: [dart test, "  "]')),
       throwsA(_error('check[1]', 'must not be empty')),
     );
+  });
+
+  test('a tasks_dir that is not a relative folder path is refused', () {
+    for (final value in ['/abs', 'docs/', '../tasks', 'docs/./backlog', 'my tasks', '" "']) {
+      expect(
+        () => DispatcherConfig.parse(_with('tasks_dir', 'tasks_dir: $value')),
+        throwsA(isA<ConfigError>().having((error) => error.key, 'key', 'tasks_dir')),
+        reason: value,
+      );
+    }
   });
 
   test('a private pattern that is not a valid regex is refused', () {

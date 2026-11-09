@@ -1,10 +1,10 @@
 # Backlog templates
 
-Use these as starting points. Replace example names and all placeholders with the agreed scope. Omit irrelevant fields rather than leaving empty headings. Requirements should describe observable behavior; a list of implementation actions alone is not acceptance criteria. The layout, ids, task fields and the ready checklist are defined in [.agents/rules/project-tasks-format.md](../../../rules/project-tasks-format.md); these templates only show the shape.
+Use these as starting points. Replace example names and all placeholders with the agreed scope. Omit irrelevant fields rather than leaving empty headings. Requirements should describe observable behavior; a list of implementation actions alone is not acceptance criteria. The layout, ids, task fields and the ready checklist are defined in [.agents/rules/backlog-format.md](../../../rules/backlog-format.md); these templates only show the shape.
 
 ## Epic index
 
-Path: `project-tasks/<epic-slug>/index.md`
+Path: `<tasks_dir>/<epic-slug>/index.md`
 
 ```markdown
 ---
@@ -38,7 +38,7 @@ abbr: <ABBR>
 
 ## Story index
 
-Path: `project-tasks/<epic-slug>/stories/01-<story-slug>/index.md`
+Path: `<tasks_dir>/<epic-slug>/stories/01-<story-slug>/index.md`
 
 ```markdown
 # STORY 1: <Outcome>
@@ -80,7 +80,7 @@ As <user>, I want <behavior> so that <benefit>.
 
 ## Task
 
-Path: `project-tasks/<epic-slug>/stories/01-<story-slug>/01-<task-slug>/index.md`
+Path: `<tasks_dir>/<epic-slug>/stories/01-<story-slug>/01-<task-slug>/index.md`
 
 ```markdown
 ---
@@ -137,7 +137,7 @@ For a visual widget or assembly task, add `## View spec` (after `## Behavior`) a
 
 ## Standalone bug or improvement task
 
-Paths: `project-tasks/bugs/01-<bug-slug>/index.md` or `project-tasks/improvements/01-<improvement-slug>/index.md`.
+Paths: `<tasks_dir>/bugs/01-<bug-slug>/index.md` or `<tasks_dir>/improvements/01-<improvement-slug>/index.md`.
 
 Use the task template above with these changes:
 

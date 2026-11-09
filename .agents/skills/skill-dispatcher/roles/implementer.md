@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Implements one task of project-tasks/ in a sandboxed clone and reports. Also fixes review findings or failed checks when asked.
+description: Implements one task of the backlog folder (`tasks_dir`) in a sandboxed clone and reports. Also fixes review findings or failed checks when asked.
 access: edit
 ---
 
@@ -13,7 +13,7 @@ You implement one task of this repository and stop. A script started you in a cl
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Implementation".
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Implementation".
-- `.agents/rules/project-tasks-format.md`.
+- `.agents/rules/backlog-format.md`.
 - The task `index.md` named in your brief, all of it, then its story and epic indexes.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).
 - The task's Contract, linked upstream/parent agreements, named consumers and assembly owner. Check existing dependency code matches the agreed contract before editing.
@@ -27,7 +27,7 @@ You implement one task of this repository and stop. A script started you in a cl
 3. Put every new file where the project rules and the project overrides say.
 4. Comments: one or two short plain sentences explaining why, only where the code is not obvious.
 5. Run the per-file format and analyze commands the project overrides name, on the files you touched, by literal path, as separate simple commands (see "One simple command per check" in the runner rules), and fix what they report.
-6. Do not write tests. The next stage does. Do not edit anything under `project-tasks/`: the script closes the task.
+6. Do not write tests. The next stage does. Do not edit anything in the backlog folder (`tasks_dir` in `planner_dispatcher.yaml`): the script closes the task.
 7. Never run `git add`, `git commit`, `git push` or `git checkout`, and never change branches. The script commits.
 
 ## When a brief asks for a fix

@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 const _libraryPaths = [
   '.agents/skills/skill-dispatcher',
   '.agents/skills/skill-planner',
-  '.agents/rules/project-tasks-format.md',
+  '.agents/rules/backlog-format.md',
 ];
 const _projectFiles = [
   'planner_dispatcher.yaml',
@@ -181,13 +181,24 @@ void main() {
     Directory('$project/.agents/skills/skill-planner.install-tmp').createSync(recursive: true);
     File('$project/.agents/skills/skill-planner.install-tmp/half.md').writeAsStringSync('half');
     Directory('$project/.agents/rules').createSync(recursive: true);
-    File('$project/.agents/rules/project-tasks-format.md.install-tmp').writeAsStringSync('half');
+    File('$project/.agents/rules/backlog-format.md.install-tmp').writeAsStringSync('half');
 
     installer().install();
 
     expect(Directory('$project/.agents/skills/skill-planner.install-tmp').existsSync(), isFalse);
-    expect(File('$project/.agents/rules/project-tasks-format.md.install-tmp').existsSync(), isFalse);
+    expect(File('$project/.agents/rules/backlog-format.md.install-tmp').existsSync(), isFalse);
     expect(File('$project/.agents/skills/skill-planner/SKILL.md').existsSync(), isTrue);
+  });
+
+  test('install removes the format rule under its old name', () {
+    File('$project/.agents/rules/project-tasks-format.md')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('old');
+
+    installer().install();
+
+    expect(File('$project/.agents/rules/project-tasks-format.md').existsSync(), isFalse);
+    expect(File('$project/.agents/rules/backlog-format.md').existsSync(), isTrue);
   });
 
   test('a real folder at a link path raises InstallError and changes nothing', () {

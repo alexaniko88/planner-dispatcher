@@ -106,48 +106,51 @@ void main() {
   });
 
   group('TaskArchiver', () {
-    test('moves the task to done/, marks it done and fixes the links', () async {
-      final directory = _repo();
-      void write(String path, String text) {
-        File('${directory.path}/$path')
-          ..createSync(recursive: true)
-          ..writeAsStringSync(text);
-      }
+    for (final root in ['docs/backlog', 'planning/tasks']) {
+      test('moves the task to done/, marks it done and fixes the links under $root', () async {
+        final directory = _repo();
+        void write(String path, String text) {
+          File('${directory.path}/$path')
+            ..createSync(recursive: true)
+            ..writeAsStringSync(text);
+        }
 
-      const task = 'project-tasks/e/stories/01-s/01-a';
-      write(
-        '$task/index.md',
-        '---\nid: E-01-01\nstatus: ready\ntype: feat\n---\n\n# Add a\n\nStory: [S](../index.md)\n\nMockup: [m](mockup.html)\n\n'
-            '## Acceptance\n\n- [ ] When x, then y.\n\n## Other\n\n- [ ] keep\n',
-      );
-      write('$task/mockup.html', '<html></html>');
-      write('project-tasks/e/stories/01-s/index.md', '# Story\n\n1. [Add a](01-a/index.md)\n');
-      _git(directory.path, ['add', '-A']);
-      _git(directory.path, ['commit', '-q', '-m', 'seed']);
+        final task = '$root/e/stories/01-s/01-a';
+        write(
+          '$task/index.md',
+          '---\nid: E-01-01\nstatus: ready\ntype: feat\n---\n\n# Add a\n\nStory: [S](../index.md)\n\nMockup: [m](mockup.html)\n\n'
+              '## Acceptance\n\n- [ ] When x, then y.\n\n## Other\n\n- [ ] keep\n',
+        );
+        write('$task/mockup.html', '<html></html>');
+        write('$root/e/stories/01-s/index.md', '# Story\n\n1. [Add a](01-a/index.md)\n');
+        _git(directory.path, ['add', '-A']);
+        _git(directory.path, ['commit', '-q', '-m', 'seed']);
 
-      final parsed = Task.tryParse(
-        path: '$task/index.md',
-        text: File('${directory.path}/$task/index.md').readAsStringSync(),
-      );
-      if (parsed == null) fail('The sample task did not parse.');
-      final newDirectory = await TaskArchiver(workspace: directory.path, run: runSystemCommand).archive(
-        parsed,
-        notes: '## Summary\n\nDone.',
-      );
+        final parsed = Task.tryParse(
+          path: '$task/index.md',
+          text: File('${directory.path}/$task/index.md').readAsStringSync(),
+        );
+        if (parsed == null) fail('The sample task did not parse.');
+        final newDirectory = await TaskArchiver(workspace: directory.path, run: runSystemCommand, tasksDir: root)
+            .archive(
+              parsed,
+              notes: '## Summary\n\nDone.',
+            );
 
-      expect(newDirectory, 'project-tasks/e/stories/01-s/done/01-a');
-      final index = File('${directory.path}/$newDirectory/index.md').readAsStringSync();
-      expect(index, contains('status: done'));
-      expect(index, contains('- [x] When x, then y.'));
-      expect(index, contains('- [ ] keep'));
-      expect(index, contains('[S](../../index.md)'));
-      expect(index, contains('[m](mockup.html)'));
-      expect(File('${directory.path}/$newDirectory/notes.md').readAsStringSync(), contains('Done.'));
-      expect(
-        File('${directory.path}/project-tasks/e/stories/01-s/index.md').readAsStringSync(),
-        contains('(done/01-a/index.md)'),
-      );
-      expect(Directory('${directory.path}/$task').existsSync(), isFalse);
-    });
+        expect(newDirectory, '$root/e/stories/01-s/done/01-a');
+        final index = File('${directory.path}/$newDirectory/index.md').readAsStringSync();
+        expect(index, contains('status: done'));
+        expect(index, contains('- [x] When x, then y.'));
+        expect(index, contains('- [ ] keep'));
+        expect(index, contains('[S](../../index.md)'));
+        expect(index, contains('[m](mockup.html)'));
+        expect(File('${directory.path}/$newDirectory/notes.md').readAsStringSync(), contains('Done.'));
+        expect(
+          File('${directory.path}/$root/e/stories/01-s/index.md').readAsStringSync(),
+          contains('(done/01-a/index.md)'),
+        );
+        expect(Directory('${directory.path}/$task').existsSync(), isFalse);
+      });
+    }
   });
 }

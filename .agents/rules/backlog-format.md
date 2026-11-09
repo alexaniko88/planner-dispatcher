@@ -1,16 +1,18 @@
 ---
 paths:
-  - "project-tasks/**"
+  - "docs/backlog/**"
 ---
 
-# Project tasks format
+# Backlog format
 
-Single source for how `project-tasks/` is laid out and how a task is written. Skills and roles link to this file and never copy it.
+Single source for how the backlog is laid out and how a task is written. Skills and roles link to this file and never copy it.
+
+The backlog lives in `<tasks_dir>/`, where `<tasks_dir>` is the `tasks_dir` value of `planner_dispatcher.yaml` (default `docs/backlog`). It is a path relative to the project root.
 
 ## Layout
 
 ```text
-project-tasks/
+<tasks_dir>/
 ├── planning/
 │   └── <topic>/
 │       └── planning.md
@@ -39,7 +41,7 @@ project-tasks/
 
 ## Interview record
 
-`project-tasks/planning/<topic>/planning.md` holds one planning effort, including efforts that span stories. It is not a task: give it no task front matter or `index.md`, and never list it as a dispatcher dependency. This location lets interviewing begin before the user agrees to a backlog structure. Reuse its path when resuming the same effort.
+`<tasks_dir>/planning/<topic>/planning.md` holds one planning effort, including efforts that span stories. It is not a task: give it no task front matter or `index.md`, and never list it as a dispatcher dependency. This location lets interviewing begin before the user agrees to a backlog structure. Reuse its path when resuming the same effort.
 
 It holds the original request, evidence, coverage, decisions, open questions and interview review results; its working format is in [the planner's question reference](../skills/skill-planner/references/questions.md).
 
@@ -126,7 +128,7 @@ Two tasks overlap when their `touches` overlap. They never run at the same time.
 - List specific golden files, never the whole `goldens_dir`.
 - Prefer exact code/test paths to feature-wide globs. If several tasks edit the snapshot harness, list that file in each; overlap is intentional serialization, not a semantic dependency.
 - A generated or shared strings folder counts as a path like any other. Two tasks that add strings overlap.
-- Do not list generated index files the planner notes name, or the `project-tasks/` indexes. A merge conflict there is small and the user resolves it.
+- Do not list generated index files the planner notes name, or the backlog indexes. A merge conflict there is small and the user resolves it.
 
 ## Writing rules
 

@@ -1,19 +1,20 @@
 import 'dart:io';
 
 import 'command_runner.dart';
+import 'config.dart';
 import 'task.dart';
 
-/// Gives the text of every `index.md` under `project-tasks/`, keyed by its path.
+/// Gives the text of every `index.md` under the backlog folder (`tasks_dir`), keyed by its path.
 typedef ReadIndexFiles = Future<Map<String, String>> Function();
 
-/// Loads the tasks of `project-tasks/`.
+/// Loads the tasks of the backlog folder (`tasks_dir`).
 class TaskLoader {
   final ReadIndexFiles read;
 
   const TaskLoader(this.read);
 
-  /// Reads the files of a local folder, for example `project-tasks`.
-  factory TaskLoader.fromDisk({String root = 'project-tasks'}) {
+  /// Reads the files of a local folder, for example `docs/backlog`.
+  factory TaskLoader.fromDisk({String root = DispatcherConfig.defaultTasksDir}) {
     return TaskLoader(() async {
       final files = <String, String>{};
       final folder = Directory(root);
@@ -32,7 +33,7 @@ class TaskLoader {
   factory TaskLoader.fromGit({
     required String ref,
     required RunCommand run,
-    String root = 'project-tasks',
+    String root = DispatcherConfig.defaultTasksDir,
   }) {
     return TaskLoader(() async {
       final files = <String, String>{};

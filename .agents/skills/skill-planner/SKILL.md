@@ -1,7 +1,7 @@
 ---
 name: skill-planner
 description: >
-  Plans a feature, improvement, bug or refactor into tasks under project-tasks/ that are so concrete a runner
+  Plans a feature, improvement, bug or refactor into tasks under the backlog folder (`tasks_dir`, default docs/backlog) that are so concrete a runner
   can implement each one without asking anything. Interviews the user one question at a time, asks the view
   questions for UI work, builds an HTML mockup the user approves, proposes the acceptance criteria, and checks
   every task with a fresh agent that has not seen the conversation. Use when the user says "plan", "create
@@ -16,9 +16,9 @@ effort: medium
 
 Turn the user's idea into tasks that a runner can implement without asking anyone. This is where the time goes: every question left open in a task becomes a blocked run later. The runners follow `.agents/skills/skill-dispatcher/` and read only what is in the repo, so a task must carry everything it needs.
 
-Project facts come only from three places: `planner_dispatcher.yaml` (the commands and settings), the files in its `rules` list, and `.agents/planner-dispatcher/planner-notes.md` (branches, pull requests, UI sources, project skills, checks and coverage checks). Read all three before you plan. `<dart>` below is the config's `dart` value.
+Project facts come only from three places: `planner_dispatcher.yaml` (the commands and settings), the files in its `rules` list, and `.agents/planner-dispatcher/planner-notes.md` (branches, pull requests, UI sources, project skills, checks and coverage checks). Read all three before you plan. `<dart>` below is the config's `dart` value and `<tasks_dir>` is its `tasks_dir` value (default `docs/backlog`).
 
-The layout, ids, task fields and sections, the ready checklist and the done rules are in `.agents/rules/project-tasks-format.md`. Follow that file and do not copy it into tasks. Running the tasks is `skill-dispatcher`'s job, not yours.
+The layout, ids, task fields and sections, the ready checklist and the done rules are in `.agents/rules/backlog-format.md`. Follow that file and do not copy it into tasks. Running the tasks is `skill-dispatcher`'s job, not yours.
 
 ## Talking to the user
 
@@ -26,10 +26,11 @@ These rules apply to every step below.
 
 - **Work quietly.** Do not narrate reads, searches, writes or checks. Messages are questions, blockers, or the final summary in step 10. A question may include the short decision checkpoint below, the proposed split in step 6, or the criteria in step 7. Show the mockup when step 5 requires it.
 - **One question per message.** Never show two questions at once, not even as a numbered list. With a question dialog, put exactly one question in each call. Wait for the answer before the next.
-- **Atomic questions.** Ask for one decision in short, plain words, with at most two short lines of context. Split independent decisions; alternatives for the same decision can stay together. Never hide several decisions inside one yes/no question.
-- **Recommendations.** Recommend only when repository evidence, an agreed constraint or official documentation supports it; give the reason in one line. Let "yes" accept that recommendation. Present genuinely open product preferences neutrally. A proposal is not a decision until the user accepts it.
+- **Atomic questions.** Ask for one decision. Keep the question short, clear and in plain words, so the user understands it on the first read: one line when you can, plus at most one short line of context. Split independent decisions; alternatives for the same decision stay together. Never hide several decisions inside one yes/no question.
+- **At most three options.** Offer up to three answers to choose from. Three is the goal; offer fewer only when there are fewer real alternatives. Each option is a few words, with at most one short line of explanation.
+- **Always recommend.** Every question has one recommended answer, listed first and marked "(Recommended)", with its reason in one line. Base it on repository evidence, an agreed constraint or official documentation when there is any. For an open product preference, recommend the option that best fits the request and the app as it is today, and say it is your preference. Let "yes" accept the recommendation. A recommendation is not a decision until the user accepts it.
 - **Checkpoints.** At a natural boundary or when the interview becomes long, briefly state the settled decisions and remaining topics, then ask one question about continuing. No fixed question limit. A pause preserves open questions; it does not accept defaults or complete the interview.
-- **Always allow a typed answer.** The user must be able to answer in their own words when none of your options fits. With a question dialog, keep a last choice such as "Something else (I will type it)", and never remove the tool's own "Other" choice. If the dialog cannot take typed text, or the answer is open (a name, a number, a description), ask as plain chat text instead of a dialog.
+- **Always allow a typed answer.** Besides the options, the user can always answer in their own words when none of them fits. This choice does not count toward the three. With a question dialog, use the tool's own "Other" choice and never remove it; if the tool has none, add a last choice "Something else (I will type it)". If the dialog cannot take typed text, or the answer is open (a name, a number, a description), ask as plain chat text: list up to three numbered suggestions, the recommended one first, and say the user can also type their own answer.
 - **Final summary.** When everything is settled, show the summary from step 10. That is the only long message.
 
 ## Before you start
@@ -52,7 +53,7 @@ These rules apply to every step below.
 Find the facts yourself; ask the user only for decisions.
 
 - Read the config, the files in its `rules`, the planner notes, the format rule and the code the idea touches. For UI, read what the planner notes' `## UI sources` names and, when `goldens_dir` is set, the matching images there; they show how the app looks today. Check a library's official documentation when a choice depends on what it can do.
-- Search all of `project-tasks/`, including `done/` folders, for the same or overlapping work (search related terms, not only the title). If it exists, extend it, and name it in your next question when the user needs to know. For a finished task, decide whether the new work is a duplicate, a regression or a follow-up, and link it. If that is unclear, ask.
+- Search all of `<tasks_dir>/`, including `done/` folders, for the same or overlapping work (search related terms, not only the title). If it exists, extend it, and name it in your next question when the user needs to know. For a finished task, decide whether the new work is a duplicate, a regression or a follow-up, and link it. If that is unclear, ask.
 - Find the epic and story each new task belongs to by outcome and acceptance criteria, not by title. Epics and stories never move, so add to them freely. Use `bugs/` or `improvements/` for a standalone report. Ask the user only if two parents fit equally well.
 
 ## 2. Pick the depth
@@ -106,7 +107,7 @@ You propose the criteria from the interview and the user confirms them. Do not a
 Read [references/templates.md](references/templates.md) and write the task folders.
 
 - Fill every field of the front matter. Size `complexity` by reasoning and risk: **low** follows an established contract/pattern; **medium** introduces bounded logic or several interacting states; **high** involves difficult lifecycle, concurrency, migration or architecture decisions already settled in the plan. A small timer change is not automatically high; file count alone never makes it high. Split multiple responsibilities instead of labeling an oversized task high.
-- `touches` prefers exact paths, including tests and, when `goldens_dir` is set, golden files. Use a narrow glob only when necessary, and the localization folder the project rules name when strings are added. Edits to a shared test harness count as overlap. Do not list the generated index files the planner notes name, or the `project-tasks/` indexes.
+- `touches` prefers exact paths, including tests and, when `goldens_dir` is set, golden files. Use a narrow glob only when necessary, and the localization folder the project rules name when strings are added. Edits to a shared test harness count as overlap. Do not list the generated index files the planner notes name, or the backlog indexes.
 - `skills` lists project skills a runner must read, chosen from the planner notes' `## Project skills`. Do not add an integration-test skill to ordinary implementation tasks.
 - Fill `## Decisions` with what the user decided and why, and `## Out of scope` with what the task does not do. `## Files and tests` says what is created or changed and which tests are written.
 - Verify every existing code name/path in the repo. Explicitly mark planned new symbols and locations in the Contract; never present them as existing APIs. Use relative Markdown links and repository-relative paths; no local usernames, absolute paths or secrets.
@@ -131,7 +132,7 @@ If a requirement or upstream contract changes, mark affected pending tasks `draf
 ## 10. Validate and hand off
 
 - Check unique ids, numbering, paths, relative links, valid dependency ids and no cycles. Follow the whole-plan checks in [references/task-splitting.md](references/task-splitting.md): requirements have owners and checks, contracts fit, every piece has a consumer, wiring is owned, and the delivery order preserves a working app. Compare related tasks together; passing individual cold reads alone does not prove the pieces fit.
-- When every task of the effort is `ready`, delete the planning record and everything else that only served the planning, as the [interview record](../../rules/project-tasks-format.md#interview-record) rule says, and include the deletion in the commit. Check that no file still links to them.
+- When every task of the effort is `ready`, delete the planning record and everything else that only served the planning, as the [interview record](../../rules/backlog-format.md#interview-record) rule says, and include the deletion in the commit. Check that no file still links to them.
 - Report the counts, which tasks are `ready` and which are `draft` and why, and any decision still open. Keep it short.
 - When nothing else is needed, show the full commit message and the exact files, then ask this once, in its own bold paragraph:
 

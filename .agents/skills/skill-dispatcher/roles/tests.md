@@ -13,7 +13,7 @@ You write the tests for what the implementer just changed, then stop. A script s
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Tests".
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Tests".
-- `.agents/rules/project-tasks-format.md`.
+- `.agents/rules/backlog-format.md`.
 - The task `index.md` named in your brief, especially `## Acceptance` and `## Files and tests`, then its story and epic indexes.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).
 - The change: `git diff origin/<base_branch>...HEAD --stat` (`base_branch` from `planner_dispatcher.yaml`), then the changed files.
@@ -26,7 +26,7 @@ You write the tests for what the implementer just changed, then stop. A script s
 2. Run only the tests you wrote or changed, with the per-file test command the project overrides name, by literal path. Fix stale expectations that the change caused in other tests, and run those too.
 3. Run the per-file format and analyze commands the project overrides name, on the files you touched, by literal path. Run every check as its own simple command (see "One simple command per check" in the runner rules), so none is denied.
 4. Never edit production code. If a test shows a real bug, stop and put it under "Blocked". Do not patch it.
-5. Never run `git add`, `git commit`, `git push` or `git checkout`. Do not edit anything under `project-tasks/`.
+5. Never run `git add`, `git commit`, `git push` or `git checkout`. Do not edit anything in the backlog folder (`tasks_dir` in `planner_dispatcher.yaml`).
 
 ## Report
 
