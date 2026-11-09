@@ -1,6 +1,6 @@
 ---
 id: PD-01-02
-status: ready
+status: done
 type: feat
 complexity: medium
 depends-on: [PD-01-01]
@@ -15,9 +15,9 @@ skills: []
 
 # Dispatcher skill and roles
 
-Story: [Dispatcher](../index.md)
+Story: [Dispatcher](../../index.md)
 
-Epic: [Standalone planner and dispatcher](../../../index.md)
+Epic: [Standalone planner and dispatcher](../../../../index.md)
 
 **Run this task by hand** in a normal AI session in this repo, after PD-01-01 is merged. Open a normal PR. In that PR, move this task folder to `done/` with `status: done` and a `notes.md`, as the format rule's done rule says.
 
@@ -29,7 +29,7 @@ Add the generic dispatcher skill, the three runner roles, the shared runner rule
 
 - Source to copy (public repo `https://github.com/alexaniko88/sport_timer`, branch `master`): `.agents/skills/skill-dispatcher/SKILL.md`, `roles/implementer.md`, `roles/tests.md`, `roles/reviewer.md`, `references/project-overrides.md`, `.agents/rules/project-tasks-format.md`; the role guards in `test/architecture/ai_setup_test.dart` (group `dispatcher`).
 - Engine from PD-01-01: `Role`, `Tool`, `RoleModels.table` in `lib/src/role_models.dart`; `DispatcherConfig` in `lib/src/config.dart`; stage brief in `lib/src/stage_runner.dart`.
-- Contracts: layout, consumer paths, role reading order and default models in the [epic](../../../index.md#shared-contracts).
+- Contracts: layout, consumer paths, role reading order and default models in the [epic](../../../../index.md#shared-contracts).
 
 ## Contract
 

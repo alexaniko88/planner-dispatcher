@@ -19,7 +19,7 @@ The engine and its commands (`dispatcher`, `sync`), the config loader, the defau
 ## Tasks
 
 1. [PD-01-01: Generic engine and config](done/01-generic-engine/index.md). Run by hand.
-2. [PD-01-02: Dispatcher skill and roles](02-dispatcher-skill-and-roles/index.md). Run by hand.
+2. [PD-01-02: Dispatcher skill and roles](done/02-dispatcher-skill-and-roles/index.md). Run by hand.
 
 ## Dependencies and open decisions
 
