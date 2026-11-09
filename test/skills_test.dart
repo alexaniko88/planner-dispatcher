@@ -1,0 +1,153 @@
+import 'dart:io';
+
+import 'package:planner_dispatcher/src/config.dart';
+import 'package:planner_dispatcher/src/role_models.dart';
+import 'package:test/test.dart';
+
+const _dispatcherFolder = '.agents/skills/skill-dispatcher';
+const _formatRule = '.agents/rules/project-tasks-format.md';
+const _accessModes = {'read-only', 'edit'};
+const _headings = ['## Common', '## Implementation', '## Tests', '## Review checks'];
+
+/// What a role reads, in this order, the first time each one is named.
+const _readOrder = [
+  'planner_dispatcher.yaml',
+  'runner-rules.md',
+  '.agents/planner-dispatcher/project-overrides.md',
+  'project-tasks-format.md',
+];
+
+// A project build or test command must not appear in shipped dispatcher files.
+final _projectCommand = RegExp(r'\bfvm\b|\bflutter (analyze|test|pub|run|gen-l10n|build)\b', caseSensitive: false);
+
+final _referencedPath = RegExp(r'\.agents/(?:rules|skills)/[A-Za-z0-9_./\-]+\.md');
+
+void main() {
+  group('dispatcher', () {
+    for (final role in Role.values) {
+      test('${role.name} has a role file that the runner can read', () {
+        final markdown = File('$_dispatcherFolder/roles/${role.name}.md').readAsStringSync();
+
+        expect(_frontMatterValue(markdown, 'name'), role.name);
+        expect(_accessModes, contains(_frontMatterValue(markdown, 'access')));
+      });
+
+      test('${role.name} reads the config, runner rules, project overrides and format rule in order', () {
+        final markdown = File('$_dispatcherFolder/roles/${role.name}.md').readAsStringSync();
+        final section = _section(markdown, '## Read first');
+
+        expect(section, isNotNull, reason: '${role.name}.md has no "## Read first" section');
+        final positions = [for (final name in _readOrder) section!.indexOf(name)];
+        expect(positions, everyElement(isNonNegative), reason: '${role.name}.md must name all of $_readOrder');
+        expect(positions, orderedEquals([...positions]..sort()), reason: '${role.name}.md reads them out of order');
+      });
+    }
+
+    test('the reviewer role is read-only and says so', () {
+      final markdown = File('$_dispatcherFolder/roles/reviewer.md').readAsStringSync();
+
+      expect(_frontMatterValue(markdown, 'access'), 'read-only');
+      expect(markdown, contains('Never edit'));
+    });
+
+    test('there is no role file without a Role value', () {
+      final names = _files('$_dispatcherFolder/roles').map(_baseName).toList()..sort();
+
+      expect(names, (Role.values.map((role) => '${role.name}.md').toList()..sort()));
+    });
+
+    test('SKILL.md names every default model of the table', () {
+      final text = File('$_dispatcherFolder/SKILL.md').readAsStringSync();
+
+      for (final models in RoleModels.table.values) {
+        for (final model in models.values) {
+          expect(text, contains(model.displayName), reason: 'SKILL.md does not mention ${model.displayName}');
+        }
+      }
+    });
+
+    test('every file the dispatcher files tell to read exists', () {
+      for (final file in _files(_dispatcherFolder, recursive: true)) {
+        final text = File(file).readAsStringSync();
+        for (final match in _referencedPath.allMatches(text)) {
+          final path = match.group(0) ?? '';
+          expect(File(path).existsSync(), isTrue, reason: '$file mentions $path, which does not exist');
+        }
+      }
+    });
+
+    test('runner-rules.md and the project overrides have exactly the four sections', () {
+      for (final path in [
+        '$_dispatcherFolder/references/runner-rules.md',
+        '.agents/planner-dispatcher/project-overrides.md',
+      ]) {
+        expect(_headingsOf(File(path).readAsStringSync()), _headings, reason: path);
+      }
+    });
+
+    test('no dispatcher file or the format rule names a project build command', () {
+      final files = [..._files(_dispatcherFolder, recursive: true), _formatRule];
+
+      for (final file in files) {
+        final lines = File(file).readAsLinesSync();
+        for (final (index, line) in lines.indexed) {
+          expect(_projectCommand.hasMatch(line), isFalse, reason: '$file:${index + 1}: $line');
+        }
+      }
+    });
+
+    test('this repo config is valid and every rule file it lists exists', () {
+      final config = DispatcherConfig.load();
+
+      for (final rule in config.rules) {
+        expect(File(rule).existsSync(), isTrue, reason: 'rules lists $rule, which does not exist');
+      }
+    });
+
+    test('the Claude skill folder links to the shipped skill', () {
+      const link = '.claude/skills/skill-dispatcher';
+
+      expect(FileSystemEntity.isLinkSync(link), isTrue);
+      expect(
+        Directory(link).resolveSymbolicLinksSync(),
+        Directory(_dispatcherFolder).absolute.resolveSymbolicLinksSync(),
+      );
+    });
+  });
+}
+
+/// Files directly in [folder], or all files below it, without hidden ones like `.DS_Store`.
+List<String> _files(String folder, {bool recursive = false}) {
+  return Directory(folder)
+      .listSync(recursive: recursive, followLinks: false)
+      .whereType<File>()
+      .map((file) => file.path)
+      .where((path) => !_baseName(path).startsWith('.'))
+      .toList();
+}
+
+String _baseName(String path) => path.split('/').last;
+
+/// The value of [key] in the YAML front matter of a Markdown file.
+String? _frontMatterValue(String source, String key) {
+  final block = RegExp(r'^---\r?\n(.*?)\r?\n---', dotAll: true).firstMatch(source)?.group(1);
+  if (block == null) return null;
+  return RegExp('^$key: (.*)\$', multiLine: true).firstMatch(block)?.group(1)?.trim();
+}
+
+/// The text under [heading] up to the next `## ` heading.
+String? _section(String source, String heading) {
+  return RegExp(
+    '^${RegExp.escape(heading)}\\r?\\n(.*?)(?=^## |\\z)',
+    multiLine: true,
+    dotAll: true,
+  ).firstMatch(source)?.group(1);
+}
+
+/// Every `## ` heading of [source], outside code fences.
+List<String> _headingsOf(String source) {
+  return [
+    for (final line in source.split('\n'))
+      if (line.startsWith('## ')) line.trimRight(),
+  ];
+}

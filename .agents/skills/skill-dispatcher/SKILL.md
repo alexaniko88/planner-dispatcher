@@ -1,0 +1,62 @@
+---
+name: skill-dispatcher
+description: >
+  Picks the next ready task from project-tasks/, asks which AI tool runs it, and starts a runner for it in
+  the background. Several runners can work at once, each on its own task and clean clone, and each ends as an
+  open PR. Use when the user says "dispatch", "run the next task", "launch a task", "work on the backlog" or
+  "what can we run now".
+argument-hint: "[task id]"
+model: claude-sonnet-5-5
+effort: medium
+---
+
+# Dispatcher
+
+You pick tasks and start runners. You do not implement anything yourself. The dispatcher command does the mechanical work (which task can start, the models, the clone, every stage, the commits, the push and the PR). You talk to the user, call the command and report what comes back.
+
+`<dart>` below is the `dart` value of `planner_dispatcher.yaml` (for example `dart`). Run every command from the project root.
+
+This skill's `model` and `effort` are a recommendation and only last for the current turn. It does not matter much: the model of every stage is set by the command, not by this session.
+
+## Standing authorization
+
+For tasks from `project-tasks/` started through this skill, the runner commits, pushes its own task branch and opens the PR without asking each time. The command enforces the limits: it never pushes to the configured `base_branch` (or to `master` or `main`), never merges, never touches another branch, checks the commit format and adds the `Co-Authored-By: <tool> <model>` line, scans the diff for private data and, when the config sets `git_email_suffix`, refuses another git email. You never run `git push`, `git commit` or `gh pr` yourself.
+
+## Sync the base branch and clean merged branches
+
+Run `<dart> run planner_dispatcher:sync` once before the first step of the loop, and before the planner starts (`skill-planner` uses it too). It stops with no change when there are uncommitted changes. Otherwise it fetches, switches to the configured `base_branch`, runs `git pull --ff-only` and deletes the local branches that are already merged.
+
+A branch is deleted only when GitHub shows a merged pull request into the base branch with the same branch name and the same last commit. A branch with no pull request, new commits after the merge, an open pull request or a checkout in another worktree is kept. If GitHub cannot be read, nothing is deleted. It never touches remote branches. Report its output in one line. If it fails, show the error and stop; do not delete branches by hand.
+
+## The loop
+
+Always use `<dart> run planner_dispatcher:dispatcher ...`.
+
+1. **Find a task.** Run `<dart> run planner_dispatcher:dispatcher next` (add `--skip=ID,ID` for tasks the user already declined or that you started in this session). It prints JSON: `next` (the first task that can start, or `null`), `alsoReady`, and `waiting` (why each other ready task cannot start). When `next` is `null`, say why in one or two lines from `waiting` and stop.
+2. **Offer it.** Show the task id, title, `complexity`, what it touches, and its dependencies, in plain English. Ask which tool runs it: Claude, Codex or Antigravity (recommend Claude). The user can also say "skip" (go back to step 1 with `--skip`) or "stop".
+   The models are not a question. Each tool has default models per stage, in `lib/src/role_models.dart`; a project may override any stage under `models` in `planner_dispatcher.yaml`:
+
+   | Tool | Implementer | Tests | Reviewer |
+   | --- | --- | --- | --- |
+   | Claude | Sonnet 5.5, medium | Sonnet 5.5, medium | Opus 5.5, medium |
+   | Codex | GPT-6.1 Terra, medium | GPT-6.1 Terra, medium | GPT-6.1 Sol, medium |
+   | Antigravity | Gemini 4 Argon, medium | Gemini 4 Argon, medium | Gemini 4 Argon, high |
+
+   Run `<dart> run planner_dispatcher:dispatcher models` once per session. If it prints a `WARNING` (a model is missing or no longer the newest), tell the user before launching. Pass `--implementer=`, `--tests=` or `--reviewer=` only when the user asks for another model.
+3. **Check the limit.** At most 3 runners at once. Run `<dart> run planner_dispatcher:dispatcher status` first. If 3 are `running`, tell the user to wait for one to finish.
+4. **Launch.** Start `<dart> run planner_dispatcher:dispatcher launch <ID> --tool=<tool>` as a background command (it runs until the task ends, which can take a long time). Tell the user it started.
+5. **Ask once:** "Do you want another task?" If yes, go back to step 1 (skip every task you launched in this session). If no, do not ask again. Wait quietly for the runners.
+6. **When a runner ends,** read the last line of its output, `RESULT {json}`, and tell the user:
+   - `pullRequest`: the PR link. The task is theirs to review. If its description has a "Commands denied" section, mention it: those commands did not run.
+   - `blocked`: the exact question or the permission it needs. The branch has a `wip:` commit with the reason in the task's `notes.md`. The task needs to be refined (the `skill-planner` skill) or relaunched. A denied command alone no longer blocks a task. If the message lists "Commands the tool was not allowed to run", say which ones and offer to relaunch with `--allow="Bash(<program>:*)"` (Claude only) only when one of them was needed.
+   - `failed`: the message and the last lines of output. If `keptWorkspace` is set, the work could not be pushed and the clone was kept there; say so.
+   When a run ends and more tasks can start, remind the user, but do not launch anything on your own.
+
+## Rules
+
+- **Always allow a typed answer.** When you ask the user something (which tool, another task, a relaunch with a permission), they must be able to answer in their own words when none of your options fits. With a question dialog, keep a last choice such as "Something else (I will type it)", and never remove the tool's own "Other" choice. If the dialog cannot take typed text, ask as plain chat text instead.
+- Launch only a task that `next` returned or that the user named and the command accepts (`ready`, on `origin/<base_branch>`). Never edit a task, its status or its indexes.
+- Runner scope, allowed tools and validation are defined once in `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. Tasks requiring app or device validation, integration tests or unplanned tooling need planner refinement or a separate workflow, not a broader `--allow` as a workaround. Task contracts are fixed; a reported upstream mismatch requires planner reconciliation of affected pending tasks before relaunch.
+- Do not run the stages yourself, even if the command fails. Report the failure.
+- Nothing stays on the local disk after a run: the command deletes the clone when the task ends. `status` shows the runs in progress.
+- Rules for the runners are in `.agents/skills/skill-dispatcher/roles/`, `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. The task format is in `.agents/rules/project-tasks-format.md`.
