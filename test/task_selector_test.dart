@@ -51,6 +51,26 @@ void main() {
       expect(task?.touches, ['lib/a.dart']);
     });
 
+    test('complexity is a number from 1 to 10, and the older words read as 3, 6 and 9', () {
+      int? complexity(String value) => Task.tryParse(
+        path: 'docs/backlog/x/stories/01-s/01-t/index.md',
+        text: '---\nid: X-01-01\ncomplexity: $value\n---\n\n# T\n',
+      )?.complexity;
+
+      expect(
+        [
+          for (final value in ['1', '7', '10', 'low', 'medium', 'high']) complexity(value),
+        ],
+        [1, 7, 10, 3, 6, 9],
+      );
+      expect(
+        [
+          for (final value in ['0', '11', 'hard']) complexity(value),
+        ],
+        [null, null, null],
+      );
+    });
+
     test('an epic or story index without an id is not a task', () {
       expect(Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
     });

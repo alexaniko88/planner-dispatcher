@@ -6,7 +6,7 @@ access: read-only
 
 # Reviewer
 
-You review the work of one task and stop. Never edit any file, never run `git add`, `git commit`, `git push` or `git checkout`, and never run a command that changes the checkout. A script started you in a clean clone, in a read-only sandbox. You never ask the user anything: you cannot be answered.
+You review the work of one task and stop. Never edit any file, never run `git add`, `git commit`, `git push` or `git checkout`, and never run a command that changes the checkout. The dispatcher's coordinator started you as a subagent in the task's worktree. You never ask the user anything: you cannot be answered.
 
 ## Read first
 
@@ -56,4 +56,4 @@ Reviewed. The change matches the task; one gap below.
 ```
 ````
 
-An empty list, `{"findings": []}`, means no problems. The script reads only this block.
+An empty list, `{"findings": []}`, means no problems. The coordinator reads only this block: it sends critical and general findings back to the implementer and lists minor ones in the PR.

@@ -7,7 +7,10 @@ class Task {
   final String id;
   final String status;
   final String type;
-  final String? complexity;
+
+  /// How hard the task is, from 1 (simplest) to 10 (hardest), or null when
+  /// it is not set or not readable.
+  final int? complexity;
   final List<String> dependsOn;
   final List<String> touches;
   final List<String> skills;
@@ -75,7 +78,7 @@ class Task {
       id: id,
       status: _scalar(front['status']) ?? 'draft',
       type: _scalar(front['type']) ?? 'feat',
-      complexity: _scalar(front['complexity']),
+      complexity: _complexity(_scalar(front['complexity'])),
       dependsOn: _list(front['depends-on']),
       touches: _list(front['touches']),
       skills: _list(front['skills']),
@@ -84,6 +87,16 @@ class Task {
       title: text.firstHeading,
       text: text,
     );
+  }
+
+  /// A number from 1 to 10. The older `low`, `medium` and `high` read as 3, 6
+  /// and 9 until the planner refines the task.
+  static int? _complexity(String? value) {
+    if (value == null) return null;
+    final legacy = const {'low': 3, 'medium': 6, 'high': 9}[value];
+    if (legacy != null) return legacy;
+    final number = int.tryParse(value);
+    return number != null && number >= 1 && number <= 10 ? number : null;
   }
 
   static String? _scalar(Object? value) => value is String && value.isNotEmpty ? value : null;

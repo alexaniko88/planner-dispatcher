@@ -5,6 +5,7 @@ import 'package:planner_dispatcher/src/role_models.dart';
 import 'package:test/test.dart';
 
 const _dispatcherFolder = '.agents/skills/skill-dispatcher';
+const _checkFolder = '.agents/skills/skill-dispatcher-check';
 const _plannerFolder = '.agents/skills/skill-planner';
 const _formatRule = '.agents/rules/backlog-format.md';
 const _accessModes = {'read-only', 'edit'};
@@ -36,6 +37,23 @@ final _plannerForbidden = RegExp(
 final _referencedPath = RegExp(r'\.agents/(?:rules|skills)/[A-Za-z0-9_./\-]+\.md');
 
 void main() {
+  group('dispatcher check', () {
+    test('runs the check command and never names a project build command', () {
+      final text = File('$_checkFolder/SKILL.md').readAsStringSync();
+
+      expect(_frontMatterValue(text, 'name'), 'skill-dispatcher-check');
+      expect(text, contains('planner_dispatcher:dispatcher check'));
+      expect(_projectCommand.hasMatch(text), isFalse);
+    });
+
+    test('the Claude skill folder links to the shipped skill', () {
+      const link = '.claude/skills/skill-dispatcher-check';
+
+      expect(FileSystemEntity.isLinkSync(link), isTrue);
+      expect(Directory(link).resolveSymbolicLinksSync(), Directory(_checkFolder).absolute.resolveSymbolicLinksSync());
+    });
+  });
+
   group('dispatcher', () {
     for (final role in Role.values) {
       test('${role.name} has a role file that the runner can read', () {
@@ -77,6 +95,15 @@ void main() {
           expect(text, contains(model.displayName), reason: 'SKILL.md does not mention ${model.displayName}');
         }
       }
+    });
+
+    test('SKILL.md runs a task only through the dispatcher commands', () {
+      final text = File('$_dispatcherFolder/SKILL.md').readAsStringSync();
+
+      for (final command in ['check', 'models', 'start', 'commit', 'block', 'finish']) {
+        expect(text, contains('planner_dispatcher:dispatcher $command'), reason: command);
+      }
+      expect(text, isNot(contains('dispatcher launch')));
     });
 
     test('every file the dispatcher files tell to read exists', () {

@@ -1,5 +1,5 @@
 import 'command_runner.dart';
-import 'pr_description.dart';
+import 'pr_body.dart';
 
 /// The commit subject rule for the commit lines a stage reports. The types
 /// come from the project's `commit_types`.

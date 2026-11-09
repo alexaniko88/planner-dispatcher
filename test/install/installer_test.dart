@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:planner_dispatcher/src/config.dart';
@@ -6,9 +7,11 @@ import 'package:test/test.dart';
 
 const _libraryPaths = [
   '.agents/skills/skill-dispatcher',
+  '.agents/skills/skill-dispatcher-check',
   '.agents/skills/skill-planner',
   '.agents/rules/backlog-format.md',
 ];
+const _skills = ['skill-dispatcher', 'skill-dispatcher-check', 'skill-planner'];
 const _projectFiles = [
   'planner_dispatcher.yaml',
   '.agents/planner-dispatcher/project-overrides.md',
@@ -51,14 +54,14 @@ void main() {
     return root;
   }
 
-  test('a fresh install writes the library files, both links and the three project files', () {
+  test('a fresh install writes the library files, the skill links and the three project files', () {
     final report = installer().install();
 
-    expect(report.written, [..._libraryPaths, '.claude/skills/skill-dispatcher', '.claude/skills/skill-planner']);
+    expect(report.written, [..._libraryPaths, for (final name in _skills) '.claude/skills/$name']);
     expect(report.created, unorderedEquals(_projectFiles));
     expect(report.kept, isEmpty);
     expect(report.starterChanged, isEmpty);
-    for (final name in ['skill-dispatcher', 'skill-planner']) {
+    for (final name in _skills) {
       final link = Link('$project/.claude/skills/$name');
       expect(link.targetSync(), '../../.agents/skills/$name');
       expect(
@@ -240,6 +243,42 @@ void main() {
       '# New starter\n',
     );
     expect(File('$project/.agents/planner-dispatcher/planner-notes.md').readAsStringSync(), isNot('# New starter\n'));
+  });
+
+  group('Claude permissions', () {
+    List<Object?> allow() =>
+        ((jsonDecode(File('$project/.claude/settings.json').readAsStringSync()) as Map)['permissions'] as Map)['allow']
+            as List<Object?>;
+
+    test('a fresh install allows the library and check commands from the new config', () {
+      final report = installer().install();
+
+      expect(report.permissions, 'permissions added 7 rules to .claude/settings.json');
+      expect(allow(), containsAll(['Bash(fvm dart run planner_dispatcher:*)', 'Bash(fvm flutter test:*)']));
+    });
+
+    test('a second install adds nothing and keeps the rules the project added', () {
+      installer().install();
+      final file = File('$project/.claude/settings.json');
+      final settings = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      ((settings['permissions'] as Map)['allow'] as List).add('Bash(make:*)');
+      file.writeAsStringSync(jsonEncode(settings));
+
+      expect(installer().install().permissions, 'permissions kept .claude/settings.json');
+      expect(allow(), contains('Bash(make:*)'));
+    });
+
+    test('a broken config or settings file changes nothing and says why', () {
+      File('$project/planner_dispatcher.yaml').writeAsStringSync('dart: [broken\n');
+      expect(installer().install().permissions, startsWith('permissions skipped: planner_dispatcher.yaml: (file)'));
+      expect(File('$project/.claude/settings.json').existsSync(), isFalse);
+
+      File('$project/planner_dispatcher.yaml').deleteSync();
+      installer().install();
+      File('$project/.claude/settings.json').writeAsStringSync('{broken');
+      expect(installer().install().permissions, startsWith('permissions skipped: .claude/settings.json:'));
+      expect(File('$project/.claude/settings.json').readAsStringSync(), '{broken');
+    });
   });
 
   test('the starter config parses as a schema 1 config', () {

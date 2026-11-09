@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
+
+import '../config.dart';
+import 'claude_permissions.dart';
 
 /// Raised when an install cannot run safely. Nothing has been changed when it is thrown.
 class InstallError implements Exception {
@@ -17,11 +21,15 @@ class InstallReport {
   final List<String> kept;
   final List<String> starterChanged;
 
+  /// One line about the Claude Code permissions: what was added, or why not.
+  final String permissions;
+
   const InstallReport({
     required this.written,
     required this.created,
     required this.kept,
     required this.starterChanged,
+    this.permissions = '',
   });
 
   /// The output lines, each group sorted by path.
@@ -34,6 +42,7 @@ class InstallReport {
       ...group('created ', created),
       ...group('kept ', kept),
       ...group('starter changed: ', starterChanged),
+      if (permissions.isNotEmpty) permissions,
     ];
   }
 }
@@ -45,7 +54,7 @@ class Installer {
 
   const Installer({required this.projectRoot, required this.packageRoot});
 
-  static const _skills = ['skill-dispatcher', 'skill-planner'];
+  static const _skills = ['skill-dispatcher', 'skill-dispatcher-check', 'skill-planner'];
   static const _formatRule = '.agents/rules/backlog-format.md';
 
   /// The format rule's name before it was renamed; install removes it.
@@ -113,7 +122,40 @@ class Installer {
       _writeBytes(copy.path, current);
     }
 
-    return InstallReport(written: written, created: created, kept: kept, starterChanged: starterChanged);
+    return InstallReport(
+      written: written,
+      created: created,
+      kept: kept,
+      starterChanged: starterChanged,
+      permissions: _addPermissions(),
+    );
+  }
+
+  static const _settings = '.claude/settings.json';
+
+  /// Adds the permission rules of [ClaudePermissions] to the project's Claude
+  /// settings, from the project's config. It only adds rules and keeps the
+  /// rest of the file; it changes nothing when the config or the file cannot
+  /// be read.
+  String _addPermissions() {
+    final DispatcherConfig config;
+    try {
+      config = DispatcherConfig.load(path: _project(DispatcherConfig.fileName));
+    } on ConfigError catch (error) {
+      return 'permissions skipped: $error. Fix it and run install again.';
+    }
+    final file = File(_project(_settings));
+    try {
+      final merged = ClaudePermissions.merge(
+        file.existsSync() ? file.readAsStringSync() : null,
+        ClaudePermissions.rules(config),
+      );
+      if (merged.added.isEmpty) return 'permissions kept $_settings';
+      _writeBytes(file.path, utf8.encode(merged.text));
+      return 'permissions added ${merged.added.length} rules to $_settings';
+    } on FormatException catch (error) {
+      return 'permissions skipped: $_settings: ${error.message}';
+    }
   }
 
   void _validate() {

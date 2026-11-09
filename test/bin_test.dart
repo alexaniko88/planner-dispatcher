@@ -29,8 +29,8 @@ void main() {
     expect(result.stderr, contains('Usage: <dart> run planner_dispatcher:dispatcher'));
   });
 
-  test('dispatcher next without a config exits 78 with the one-line error', () {
-    final result = _run('dispatcher', ['next'], workingDirectory: folder.path);
+  test('dispatcher check without a config exits 78 with the one-line error', () {
+    final result = _run('dispatcher', ['check'], workingDirectory: folder.path);
 
     expect(result.exitCode, 78);
     expect('${result.stderr}'.trim(), 'planner_dispatcher.yaml: (file): not found');

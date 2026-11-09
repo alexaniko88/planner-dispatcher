@@ -7,7 +7,6 @@ import 'package:test/test.dart';
 const _minimal = '''
 dart: dart
 base_branch: main
-run_folder: app-runs
 setup: []
 check:
   - dart test
@@ -18,26 +17,26 @@ commit_types: [feat, fix]
 const _full = '''
 dart: fvm dart
 base_branch: master
-run_folder: app-runs
 setup:
   - fvm install --skip-pub-get
   - fvm flutter pub get
 check:
   - fvm flutter analyze --no-pub
   - fvm flutter test
-allowed_commands:
-  - fvm dart format
 rules:
   - CLAUDE.md
 tasks_dir: planning/tasks
 goldens_dir: test/goldens
 commit_types: [feat, fix, docs]
 git_email_suffix: "@users.noreply.github.com"
+publish: ask
 private_patterns:
   a company email: "@example\\\\.com"
 models:
   claude:
     reviewer: {model: opus, effort: high, name: Opus 5.5}
+  kimi:
+    implementer: {model: kimi-k3, name: Kimi K3}
 ''';
 
 /// [_minimal] with one top-level line replaced, added or removed.
@@ -69,7 +68,6 @@ void main() {
 
     expect(config.dart, 'fvm dart');
     expect(config.baseBranch, 'master');
-    expect(config.runFolder, 'app-runs');
     expect(config.setup, [
       ['fvm', 'install', '--skip-pub-get'],
       ['fvm', 'flutter', 'pub', 'get'],
@@ -78,29 +76,29 @@ void main() {
       ['fvm', 'flutter', 'analyze', '--no-pub'],
       ['fvm', 'flutter', 'test'],
     ]);
-    expect(config.allowedCommands, [
-      ['fvm', 'dart', 'format'],
-    ]);
     expect(config.rules, ['CLAUDE.md']);
     expect(config.tasksDir, 'planning/tasks');
     expect(config.goldensDir, 'test/goldens');
     expect(config.commitTypes, ['feat', 'fix', 'docs']);
     expect(config.gitEmailSuffix, '@users.noreply.github.com');
+    expect(config.publish, Publish.ask);
     expect(config.privatePatterns.keys, ['a company email']);
     expect(config.privatePatterns['a company email']!.hasMatch('me@example.com'), isTrue);
-    final reviewer = config.models[Tool.claude]![Role.reviewer]!;
+    final reviewer = config.models['claude']![Role.reviewer]!;
     expect((reviewer.model, reviewer.effort, reviewer.displayName), ('opus', 'high', 'Opus 5.5'));
+    final kimi = config.models['kimi']![Role.implementer]!;
+    expect((kimi.model, kimi.effort, kimi.displayName), ('kimi-k3', null, 'Kimi K3'));
   });
 
   test('a minimal config leaves the optional values empty', () {
     final config = DispatcherConfig.parse(_minimal);
 
     expect(config.setup, isEmpty);
-    expect(config.allowedCommands, isEmpty);
     expect(config.rules, isEmpty);
     expect(config.tasksDir, 'docs/backlog');
     expect(config.goldensDir, isNull);
     expect(config.gitEmailSuffix, isNull);
+    expect(config.publish, Publish.auto);
     expect(config.privatePatterns, isEmpty);
     expect(config.models, isEmpty);
   });
@@ -146,7 +144,17 @@ void main() {
     );
   });
 
-  for (final key in ['dart', 'base_branch', 'run_folder', 'setup', 'check', 'rules', 'commit_types']) {
+  test('a key of the old background runner is refused with a hint', () {
+    for (final key in ['run_folder', 'allowed_commands']) {
+      expect(
+        () => DispatcherConfig.parse(_with(key, '$key: x')),
+        throwsA(_error(key, 'is no longer used; remove it')),
+        reason: key,
+      );
+    }
+  });
+
+  for (final key in ['dart', 'base_branch', 'setup', 'check', 'rules', 'commit_types']) {
     test('a missing $key is refused', () {
       expect(() => DispatcherConfig.parse(_with(key, null)), throwsA(_error(key, 'missing')));
     });
@@ -170,10 +178,6 @@ void main() {
     expect(
       () => DispatcherConfig.parse(_with('base_branch', 'base_branch: "my branch"')),
       throwsA(_error('base_branch', 'must not contain spaces')),
-    );
-    expect(
-      () => DispatcherConfig.parse(_with('run_folder', 'run_folder: a/b')),
-      throwsA(_error('run_folder', r'must match ^[A-Za-z0-9._-]+$')),
     );
     expect(() => DispatcherConfig.parse(_with('check', 'check: []')), throwsA(_error('check', 'must not be empty')));
     expect(
@@ -204,6 +208,13 @@ void main() {
     }
   });
 
+  test('publish is auto or ask', () {
+    expect(
+      () => DispatcherConfig.parse(_with('publish', 'publish: always')),
+      throwsA(_error('publish', 'must be auto or ask')),
+    );
+  });
+
   test('a private pattern that is not a valid regex is refused', () {
     expect(
       () => DispatcherConfig.parse(_with('private_patterns', 'private_patterns: {broken: "("}')),
@@ -215,20 +226,16 @@ void main() {
     );
   });
 
-  test('a models entry must name a known tool and stage with exactly model, effort and name', () {
+  test('a models entry names any tool and a known stage, with model, name and an optional effort', () {
     String models(String body) => _with('models', 'models:\n$body');
 
-    expect(
-      () => DispatcherConfig.parse(models('  cursor:\n    reviewer: {model: a, effort: b, name: c}')),
-      throwsA(_error('models.cursor', 'unknown tool')),
-    );
     expect(
       () => DispatcherConfig.parse(models('  claude:\n    planner: {model: a, effort: b, name: c}')),
       throwsA(_error('models.claude.planner', 'unknown stage')),
     );
     expect(
-      () => DispatcherConfig.parse(models('  claude:\n    reviewer: {model: a, name: c}')),
-      throwsA(_error('models.claude.reviewer.effort', 'missing')),
+      () => DispatcherConfig.parse(models('  claude:\n    reviewer: {model: a, effort: b}')),
+      throwsA(_error('models.claude.reviewer.name', 'missing')),
     );
     expect(
       () => DispatcherConfig.parse(models('  claude:\n    reviewer: {model: a, effort: b, name: c, extra: d}')),

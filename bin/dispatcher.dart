@@ -1,30 +1,34 @@
-// Picks project tasks and runs them with an AI tool, one clean clone per task.
+// Finds the backlog tasks that can start and does the git work of one task
+// run. An agent coordinates the run: it starts the task, has a subagent per
+// stage (implementer, tests, reviewer) do the work, and finishes or blocks it.
 //
-//   <dart> run planner_dispatcher:dispatcher next [--skip=ID,ID]
-//   <dart> run planner_dispatcher:dispatcher models
-//   <dart> run planner_dispatcher:dispatcher launch <ID> --tool=claude|codex|antigravity
-//       [--implementer=MODEL] [--tests=MODEL] [--reviewer=MODEL] [--allow=PATTERN,PATTERN]
-//   <dart> run planner_dispatcher:dispatcher status
+//   <dart> run planner_dispatcher:dispatcher check
+//   <dart> run planner_dispatcher:dispatcher models <ID> --tool=<tool>
+//   <dart> run planner_dispatcher:dispatcher start <ID> --tool=<tool>
+//       [--implementer=M[:EFFORT]] [--tests=M[:EFFORT]] [--reviewer=M[:EFFORT]] [--resume]
+//   <dart> run planner_dispatcher:dispatcher commit <ID> --role=implementer|tests|reviewer --message="<subject>"
+//   <dart> run planner_dispatcher:dispatcher finish <ID>
+//   <dart> run planner_dispatcher:dispatcher block <ID> --question="<text>" | --question-file=<path>
+//   <dart> run planner_dispatcher:dispatcher guard
 //
 // <dart> is the `dart` value of planner_dispatcher.yaml, which every command
 // except the usage text reads first. The rules of each part live in lib/src/
-// and are unit tested there.
-// `launch` runs until the task ends (PR opened, blocked or failed) and prints
-// one line `RESULT {json}` at the end.
+// and are unit tested there. `finish` and `block` print one line
+// `RESULT {json}` at the end.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:planner_dispatcher/src/command_runner.dart';
 import 'package:planner_dispatcher/src/config.dart';
+import 'package:planner_dispatcher/src/extensions/touch_paths.dart';
 import 'package:planner_dispatcher/src/extensions/command_options.dart';
-import 'package:planner_dispatcher/src/launch_pipeline.dart';
-import 'package:planner_dispatcher/src/model_catalog.dart';
 import 'package:planner_dispatcher/src/role_models.dart';
-import 'package:planner_dispatcher/src/run_workspace.dart';
-import 'package:planner_dispatcher/src/stage_runner.dart';
+import 'package:planner_dispatcher/src/guard.dart';
 import 'package:planner_dispatcher/src/task.dart';
+import 'package:planner_dispatcher/src/task_finisher.dart';
 import 'package:planner_dispatcher/src/task_loader.dart';
 import 'package:planner_dispatcher/src/task_selector.dart';
+import 'package:planner_dispatcher/src/task_worktree.dart';
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
@@ -40,21 +44,27 @@ Future<void> main(List<String> args) async {
   }
   final rest = args.skip(1).toList();
   final code = switch (args.first) {
-    'next' => await _next(rest),
-    'models' => await _models(),
-    'launch' => await _launch(rest),
-    'status' => await _status(),
+    'check' => await _check(),
+    'start' => await _start(rest),
+    'commit' => await _commit(rest),
+    'finish' => await _finish(rest),
+    'block' => await _block(rest),
+    'guard' => await _guard(),
+    'models' => await _models(rest),
     _ => _usage(),
   };
   exit(code);
 }
 
-const _commands = {'next', 'models', 'launch', 'status'};
+const _commands = {'check', 'models', 'start', 'commit', 'finish', 'block', 'guard'};
 
 late final DispatcherConfig _config;
 
 int _usage() {
-  stderr.writeln('Usage: <dart> run planner_dispatcher:dispatcher next | models | launch <ID> --tool=<tool> | status');
+  stderr.writeln(
+    'Usage: <dart> run planner_dispatcher:dispatcher check | models <ID> --tool=<tool> | start <ID> --tool=<tool> '
+    '| commit <ID> --role=<role> --message=<subject> | finish <ID> | block <ID> --question=<text> | guard',
+  );
   return 64;
 }
 
@@ -105,111 +115,215 @@ Map<String, Object?> _taskJson(Task task) => {
   'branch': task.branch,
 };
 
-Future<int> _next(List<String> args) async {
+/// Every task that can start now, with its complexity and the other ready
+/// tasks it overlaps with, and why the rest wait.
+Future<int> _check() async {
   final tasks = await _tasksOnBase();
-  final busy = {
-    ...TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames()),
-    for (final run in await _runs())
-      if (run['running'] == true && run['taskId'] is String) run['taskId'] as String,
-  };
+  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames());
   final selector = TaskSelector(tasks: tasks, busyIds: busy);
-  final skipped = (args.options['skip'] ?? '').split(',').where((id) => id.isNotEmpty).toSet();
-  final candidates = selector.candidates(skipped: skipped);
+  final ready = selector.candidates();
   final waiting = {
     for (final task in tasks)
-      if (task.isReady && !candidates.contains(task)) task.label: selector.blockReason(task, skipped: skipped),
+      if (task.isReady && !ready.contains(task)) task.label: selector.blockReason(task),
   };
   stdout.writeln(
     const JsonEncoder.withIndent('  ').convert({
-      'next': candidates.isEmpty ? null : _taskJson(candidates.first),
-      'alsoReady': [for (final task in candidates.skip(1)) task.label],
+      'ready': [
+        for (final task in ready)
+          {
+            ..._taskJson(task),
+            'overlapsWith': [
+              for (final other in ready)
+                if (other != task && task.touches.overlaps(other.touches)) other.label,
+            ],
+          },
+      ],
       'waiting': waiting,
     }),
   );
   return 0;
 }
 
-Future<int> _models() async {
-  final catalogs = {
-    Tool.codex: ModelCatalog.parseCodex(await ModelCatalog.output('codex', ['debug', 'models'])),
-    Tool.antigravity: ModelCatalog.parseAntigravity(await ModelCatalog.output('agy', ['models'])),
-  };
-  for (final tool in Tool.values) {
-    stdout.writeln('\n${tool.label}');
-    final models = catalogs[tool];
-    if (models == null) {
-      stdout.writeln('  aliases: sonnet, opus (always the newest model of that family)');
-    } else if (models.isEmpty) {
-      stdout.writeln('  WARNING: could not retrieve available models');
-    } else {
-      for (final model in ModelCatalog.latestPerFamily(models)) {
-        stdout.writeln('  newest: ${model.id}');
-      }
-      for (final stale in ModelCatalog.staleModels(tool: tool, models: models, configModels: _config.models)) {
-        stdout.writeln('  WARNING: fixed model is missing or old: $stale');
-      }
-    }
-    for (final role in Role.values) {
-      final model = RoleModels.of(tool: tool, role: role, configModels: _config.models);
-      stdout.writeln('  ${role.name}: ${model.model} (${model.effort})');
-    }
+/// The task named by the one positional argument, or null after printing why.
+Future<Task?> _task(List<String> args, {List<Task>? from}) async {
+  final ids = args.positional;
+  if (ids.length != 1) {
+    _usage();
+    return null;
   }
+  final task = (from ?? await _tasksOnBase()).where((candidate) => candidate.id == ids.first).firstOrNull;
+  if (task == null) stderr.writeln('${ids.first} is not a task on origin/${_config.baseBranch}.');
+  return task;
+}
+
+Map<String, Object?> _modelsJson(Map<Role, RoleModel> models) => {
+  for (final MapEntry(key: role, value: model) in models.entries) role.name: model.toJson(),
+};
+
+/// The suggested model of each stage of a task for a tool. A tool with no
+/// suggestion prints `"suggested": false`, and the user types the models.
+Future<int> _models(List<String> args) async {
+  final tool = args.options['tool'] ?? '';
+  if (tool.isEmpty) return _usage();
+  final task = await _task(args);
+  if (task == null) return 1;
+  final models = RoleModels.suggest(tool: tool, complexity: task.complexity, configModels: _config.models);
+  stdout.writeln(
+    const JsonEncoder.withIndent('  ').convert({
+      'task': task.label,
+      'complexity': task.complexity,
+      'tool': tool,
+      'suggested': models.length == Role.values.length,
+      'models': _modelsJson(models),
+    }),
+  );
   return 0;
 }
 
-Future<int> _launch(List<String> args) async {
+/// Creates the task worktree and branch, runs the setup and claims the task,
+/// with the suggested models and any the user typed instead. Prints what the
+/// coordinating agent needs: the task, the worktree, the subagent call of
+/// each stage and the check commands.
+Future<int> _start(List<String> args) async {
   final options = args.options;
-  final ids = args.positional;
-  final tool = Tool.fromName(options['tool'] ?? '');
-  if (ids.length != 1 || tool == null) return _usage();
+  final tool = options['tool'] ?? '';
+  if (tool.isEmpty) return _usage();
+  final resume = options['resume'] == 'true';
 
   final tasks = await _tasksOnBase();
-  final task = tasks.where((candidate) => candidate.id == ids.first).firstOrNull;
-  if (task == null || !task.isReady) {
-    stderr.writeln('${ids.first} is not a ready task on origin/${_config.baseBranch}.');
+  final task = await _task(args, from: tasks);
+  if (task == null) return 1;
+  final models = {
+    ...RoleModels.suggest(tool: tool, complexity: task.complexity, configModels: _config.models),
+    for (final role in Role.values)
+      if (options[role.name] case final typed? when typed.trim().isNotEmpty) role: RoleModel.typed(typed),
+  };
+  final missing = [
+    for (final role in Role.values)
+      if (!models.containsKey(role)) '--${role.name}',
+  ];
+  if (missing.isNotEmpty) {
+    stderr.writeln('There is no suggested model for $tool: pass ${missing.join(', ')}.');
     return 1;
   }
-  final pipeline = LaunchPipeline(
-    tool: tool,
-    stages: const StageRunner(),
-    run: runSystemCommand,
-    originUrl: await _output('git', ['remote', 'get-url', 'origin']),
-    email: await _output('git', ['config', 'user.email']),
-    name: await _output('git', ['config', 'user.name']),
-    baseDirectory: RunWorkspace.baseDirectory(_config.runFolder),
-    config: _config,
-    overrides: {
-      for (final role in Role.values) role: ?options[role.name],
-    },
-    extraAllowed: (options['allow'] ?? '').split(',').where((pattern) => pattern.isNotEmpty).toList(),
-    log: (line) => stdout.writeln('[${DateTime.now().toIso8601String()}] $line'),
-  );
-  final result = await pipeline.launch(task);
-  stdout.writeln('RESULT ${jsonEncode(result.toJson())}');
-  return switch (result.outcome) {
-    RunOutcome.pullRequest => 0,
-    RunOutcome.blocked => 2,
-    RunOutcome.failed => 1,
-  };
-}
-
-/// The runs that left a state file, and whether their process is alive.
-Future<List<Map<String, Object?>>> _runs() async {
-  final runs = <Map<String, Object?>>[];
-  final base = Directory(RunWorkspace.baseDirectory(_config.runFolder));
-  if (!base.existsSync()) return runs;
-  for (final entity in base.listSync()) {
-    final state = File('${entity.path}/state.json');
-    if (!state.existsSync()) continue;
-    if (jsonDecode(state.readAsStringSync()) case {'pid': final int pid} && final Map<String, Object?> data) {
-      final alive = (await runSystemCommand('kill', ['-0', '$pid'])).ok;
-      runs.add({...data, 'running': alive, 'workspace': '${entity.path}/repo'});
-    }
+  final busy = resume ? <String>{} : TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames());
+  if (TaskSelector(tasks: tasks, busyIds: busy).blockReason(task) case final reason?) {
+    stderr.writeln('${task.label} cannot start: $reason.');
+    return 1;
   }
-  return runs;
+  final TaskWorktree worktree;
+  try {
+    worktree = await TaskWorktree.start(
+      run: runSystemCommand,
+      task: task,
+      projectRoot: Directory.current.path,
+      baseBranch: _config.baseBranch,
+      setup: _config.setup,
+      tool: tool,
+      models: models,
+      email: await _output('git', ['config', 'user.email']),
+      emailSuffix: _config.gitEmailSuffix,
+      resume: resume,
+    );
+  } on StateError catch (error) {
+    stderr.writeln(error.message);
+    return 1;
+  }
+  stdout.writeln(
+    const JsonEncoder.withIndent('  ').convert({
+      ..._taskJson(task),
+      'worktree': worktree.directory,
+      'runnerDirectory': worktree.runnerDirectory,
+      'tool': tool,
+      'stages': {
+        for (final MapEntry(key: role, value: model) in models.entries)
+          role.name: {'name': model.displayName, 'call': model.callParameters(tool)},
+      },
+      'check': [for (final command in _config.check) command.join(' ')],
+    }),
+  );
+  return 0;
 }
 
-Future<int> _status() async {
-  stdout.writeln(const JsonEncoder.withIndent('  ').convert({'runs': await _runs()}));
-  return 0;
+/// The finisher of a task started in this project, or null after printing why.
+Future<TaskFinisher?> _finisher(List<String> args) async {
+  final task = await _task(args);
+  if (task == null) return null;
+  final worktree = TaskWorktree(TaskWorktree.pathOf(projectRoot: Directory.current.path, task: task));
+  final tool = worktree.tool;
+  if (tool == null) {
+    stderr.writeln('${task.label} was not started here: run `dispatcher start ${task.id}` first.');
+    return null;
+  }
+  return TaskFinisher(
+    run: runSystemCommand,
+    task: task,
+    worktree: worktree,
+    config: _config,
+    tool: tool,
+    models: worktree.models,
+    projectRoot: Directory.current.path,
+  );
+}
+
+/// Runs [action] and prints a [StateError] as one readable message.
+Future<int> _orError(Future<void> Function() action) async {
+  try {
+    await action();
+    return 0;
+  } on StateError catch (error) {
+    stderr.writeln(error.message);
+    return 1;
+  }
+}
+
+Future<int> _commit(List<String> args) async {
+  final role = Role.values.asNameMap()[args.options['role'] ?? ''];
+  final message = args.options['message'] ?? '';
+  if (role == null || message.isEmpty) return _usage();
+  final finisher = await _finisher(args);
+  if (finisher == null) return 1;
+  return _orError(() => finisher.commit(role: role, message: message));
+}
+
+Future<int> _finish(List<String> args) async {
+  final finisher = await _finisher(args);
+  if (finisher == null) return 1;
+  return _orError(() async {
+    final url = await finisher.finish();
+    stdout.writeln('RESULT ${jsonEncode({'taskId': finisher.task.id, 'outcome': 'pullRequest', 'prUrl': url})}');
+  });
+}
+
+Future<int> _block(List<String> args) async {
+  final options = args.options;
+  final question = switch (options['question-file']) {
+    final String path => File(path).existsSync() ? File(path).readAsStringSync() : '',
+    null => options['question'] ?? '',
+  };
+  if (question.trim().isEmpty) return _usage();
+  final finisher = await _finisher(args);
+  if (finisher == null) return 1;
+  return _orError(() async {
+    await finisher.block(question);
+    stdout.writeln(
+      'RESULT ${jsonEncode({'taskId': finisher.task.id, 'outcome': 'blocked', 'message': question.trim()})}',
+    );
+  });
+}
+
+/// Checks the current branch before a push, for the planner's branches too.
+Future<int> _guard() async {
+  final problems = await Guard(
+    run: runSystemCommand,
+    directory: Directory.current.path,
+    baseBranch: _config.baseBranch,
+    commitTypes: _config.commitTypes,
+    emailSuffix: _config.gitEmailSuffix,
+    privatePatterns: _config.privatePatterns,
+  ).problems();
+  for (final problem in problems) {
+    stderr.writeln(problem);
+  }
+  return problems.isEmpty ? 0 : 1;
 }

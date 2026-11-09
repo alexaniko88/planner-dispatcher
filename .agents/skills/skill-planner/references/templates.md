@@ -76,7 +76,7 @@ Path: `<tasks_dir>/epic-<slug>/stories/story-01-<slug>/task-01-<slug>/index.md`
 id: <ABBR>-01-01
 status: draft
 type: feat
-complexity: low
+complexity: 3
 depends-on: []
 touches:
   - <path or glob the task changes>

@@ -6,7 +6,7 @@ access: edit
 
 # Tests
 
-You write the tests for what the implementer just changed, then stop. A script started you in a clean clone, in a sandbox, after the implementer's commit. It does all the git work. You never ask the user anything: you cannot be answered.
+You write the tests for what the implementer just changed, then stop. The dispatcher's coordinator started you as a subagent in the task's worktree, after the implementer's commit. It does all the git work. You never ask the user directly. When you cannot go on, you put one exact problem under "Blocked"; the coordinator asks the user and sends you the answer.
 
 ## Read first
 

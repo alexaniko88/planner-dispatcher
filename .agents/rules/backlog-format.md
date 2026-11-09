@@ -73,7 +73,7 @@ Front matter:
 id: TPL-03-02
 status: draft          # draft | ready; in done/ it is done
 type: feat             # feat | fix | improve; sets the branch prefix
-complexity: low        # low | medium | high; picks the suggested model
+complexity: 4          # 1 (simplest) to 10 (hardest); see below
 depends-on: [TPL-03-01]
 touches:               # paths or globs the task changes
   - lib/src/store.dart
@@ -81,6 +81,8 @@ touches:               # paths or globs the task changes
 skills: []             # optional; project skills the roles read, e.g. [skill-charts]
 ---
 ```
+
+`complexity` says how hard the task is for a runner, from 1 (follows an existing pattern) to 10 (the hardest work a single task can hold). `skill-dispatcher-check` shows it, and on Antigravity it picks Gemini 3.8 Flash (up to 4) or Gemini 4 Argon for the implementer and tests. An older task with `low`, `medium` or `high` reads as 3, 6 or 9 until it is refined.
 
 After the front matter, the title and the story and epic link lines, these sections, in this order. Leave out a section marked "only when" that does not apply. Keep the task short and concrete: a runner implements it without asking anything, using only code, tests and the config's `check` commands.
 
@@ -115,7 +117,7 @@ All of these are true:
 - No open decision is left, and the task reads clearly to an agent that has not seen the planning conversation (cold read passed).
 - Every criterion has a `Check` of an allowed kind.
 - A visual widget/assembly task has its view spec, and a linked mockup the user approved when the change needed one (a new screen, sheet, dialog or layout). ViewModel/state-only tasks omit both.
-- `complexity`, `depends-on` and `touches` are filled in. `depends-on` ids exist.
+- `complexity` (a number from 1 to 10), `depends-on` and `touches` are filled in. `depends-on` ids exist.
 - Its contract, consumer/assembly ownership and exact validation plan are settled, consistent with its dependencies and executable within runner boundaries. No required test infrastructure or technical decision is left for a runner to discover.
 - The whole split has complete requirement coverage and compatible contracts. Each PR preserves a buildable, usable app with its completed prerequisites.
 

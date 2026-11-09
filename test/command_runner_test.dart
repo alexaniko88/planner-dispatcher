@@ -3,12 +3,10 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 import 'package:planner_dispatcher/src/command_runner.dart';
-import 'package:planner_dispatcher/src/model_catalog.dart';
 
 void main() {
-  test('missing model command is tolerated while general commands fail', () async {
+  test('a missing command throws', () async {
     const missing = 'dispatcher_nonexistent_executable_987654321';
-    expect(await ModelCatalog.output(missing, []), isEmpty);
     expect(() => runSystemCommand(missing, []), throwsA(isA<ProcessException>()));
   });
 

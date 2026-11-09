@@ -17,35 +17,44 @@ class ConfigError implements Exception {
   String toString() => 'planner_dispatcher.yaml: $key: $problem';
 }
 
+/// How the planner and the dispatcher publish their branch.
+enum Publish {
+  auto,
+  ask,
+}
+
 /// The project values the dispatcher reads from `planner_dispatcher.yaml`
 /// (schema 1). Commands are stored as a program followed by its arguments.
 class DispatcherConfig {
   final String dart;
   final String baseBranch;
-  final String runFolder;
   final List<List<String>> setup;
   final List<List<String>> check;
-  final List<List<String>> allowedCommands;
   final List<String> rules;
   final String tasksDir;
   final String? goldensDir;
   final List<String> commitTypes;
   final String? gitEmailSuffix;
+
+  /// Whether the planner and the dispatcher commit, push and open the PR
+  /// without asking ([Publish.auto]) or ask once first ([Publish.ask]).
+  final Publish publish;
   final Map<String, RegExp> privatePatterns;
-  final Map<Tool, Map<Role, RoleModel>> models;
+
+  /// Per tool name, the project's own model suggestion for some stages.
+  final Map<String, Map<Role, RoleModel>> models;
 
   const DispatcherConfig({
     required this.dart,
     required this.baseBranch,
-    required this.runFolder,
     required this.setup,
     required this.check,
     required this.rules,
     required this.commitTypes,
     this.tasksDir = defaultTasksDir,
-    this.allowedCommands = const [],
     this.goldensDir,
     this.gitEmailSuffix,
+    this.publish = Publish.auto,
     this.privatePatterns = const {},
     this.models = const {},
   });
@@ -58,20 +67,21 @@ class DispatcherConfig {
   static const _keys = {
     'dart',
     'base_branch',
-    'run_folder',
     'setup',
     'check',
-    'allowed_commands',
     'rules',
     'tasks_dir',
     'goldens_dir',
     'commit_types',
     'git_email_suffix',
+    'publish',
     'private_patterns',
     'models',
   };
 
-  static final _runFolder = RegExp(r'^[A-Za-z0-9._-]+$');
+  /// Keys of the old background runner.
+  static const _removedKeys = {'run_folder', 'allowed_commands'};
+
   static final _commitType = RegExp(r'^[a-z]+$');
   static final _tasksDir = RegExp(r'^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$');
   static const _modelFields = {'model', 'effort', 'name'};
@@ -93,15 +103,12 @@ class DispatcherConfig {
     }
     if (root is! Map) throw const ConfigError('(file)', 'must be a map');
     for (final key in root.keys) {
+      if (_removedKeys.contains(key)) throw ConfigError('$key', 'is no longer used; remove it');
       if (!_keys.contains(key)) throw ConfigError('$key', 'unknown key');
     }
 
     final baseBranch = _string(root, 'base_branch');
     if (baseBranch.contains(' ')) throw const ConfigError('base_branch', 'must not contain spaces');
-    final runFolder = _string(root, 'run_folder');
-    if (!_runFolder.hasMatch(runFolder)) {
-      throw ConfigError('run_folder', 'must match ${_runFolder.pattern}');
-    }
     final tasksDir = root.containsKey('tasks_dir') ? _string(root, 'tasks_dir') : defaultTasksDir;
     if (!_tasksDir.hasMatch(tasksDir) || tasksDir.split('/').any((part) => part == '.' || part == '..')) {
       throw const ConfigError('tasks_dir', 'must be a relative folder path without . or ..');
@@ -119,15 +126,14 @@ class DispatcherConfig {
     return DispatcherConfig(
       dart: _string(root, 'dart'),
       baseBranch: baseBranch,
-      runFolder: runFolder,
       setup: _commands(root, 'setup'),
       check: check,
-      allowedCommands: root.containsKey('allowed_commands') ? _commands(root, 'allowed_commands') : const [],
       rules: _strings(root, 'rules'),
       tasksDir: tasksDir,
       goldensDir: root.containsKey('goldens_dir') ? _string(root, 'goldens_dir') : null,
       commitTypes: commitTypes,
       gitEmailSuffix: root.containsKey('git_email_suffix') ? _string(root, 'git_email_suffix') : null,
+      publish: _publish(root),
       privatePatterns: _patterns(root),
       models: _models(root),
     );
@@ -165,6 +171,12 @@ class DispatcherConfig {
     ];
   }
 
+  static Publish _publish(Map<dynamic, dynamic> root) {
+    if (!root.containsKey('publish')) return Publish.auto;
+    final value = _string(root, 'publish');
+    return Publish.values.asNameMap()[value] ?? (throw const ConfigError('publish', 'must be auto or ask'));
+  }
+
   static Map<String, RegExp> _patterns(Map<dynamic, dynamic> root) {
     final value = root['private_patterns'];
     if (value == null) return const {};
@@ -182,14 +194,12 @@ class DispatcherConfig {
     return patterns;
   }
 
-  static Map<Tool, Map<Role, RoleModel>> _models(Map<dynamic, dynamic> root) {
+  static Map<String, Map<Role, RoleModel>> _models(Map<dynamic, dynamic> root) {
     final value = root['models'];
     if (value == null) return const {};
     if (value is! Map) throw const ConfigError('models', 'must be a map');
-    final models = <Tool, Map<Role, RoleModel>>{};
+    final models = <String, Map<Role, RoleModel>>{};
     for (final MapEntry(key: toolName, value: stages) in value.entries) {
-      final tool = Tool.fromName('$toolName');
-      if (tool == null) throw ConfigError('models.$toolName', 'unknown tool');
       if (stages is! Map) throw ConfigError('models.$toolName', 'must be a map');
       final roles = <Role, RoleModel>{};
       for (final MapEntry(key: stageName, value: entry) in stages.entries) {
@@ -202,11 +212,11 @@ class DispatcherConfig {
         }
         roles[role] = RoleModel(
           model: _string(entry, 'model', path: '$path.model'),
-          effort: _string(entry, 'effort', path: '$path.effort'),
+          effort: entry.containsKey('effort') ? _string(entry, 'effort', path: '$path.effort') : null,
           displayName: _string(entry, 'name', path: '$path.name'),
         );
       }
-      models[tool] = roles;
+      models['$toolName'] = roles;
     }
     return models;
   }
