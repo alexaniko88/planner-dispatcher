@@ -7,8 +7,8 @@ class CommitMessage {
   /// Why [subject] is not a valid first line, or null when it is.
   static String? problem(String subject, {required List<String> types}) {
     if (subject.isEmpty) return 'The commit message is empty.';
-    if (subject.length > 100) return 'The commit message is longer than 100 characters.';
-    final pattern = RegExp('^(${types.map(RegExp.escape).join('|')}): [a-z0-9`].*[^.]\$');
+    if (subject.length > 72) return 'The commit message is longer than 72 characters.';
+    final pattern = RegExp('^(${types.map(RegExp.escape).join('|')}): [a-z0-9].*[^.]\$');
     if (!pattern.hasMatch(subject)) {
       return 'The commit message "$subject" must be "<type>: <description>", lowercase, with no final period.';
     }
@@ -81,9 +81,6 @@ class GitPublisher {
   Future<String> headSha() async => (await _git(['rev-parse', 'HEAD'])).stdout.trim();
 
   Future<String> baseSha() async => (await _git(['rev-parse', 'origin/$baseBranch'])).stdout.trim();
-
-  /// The lines the branch adds compared with the base branch on the remote.
-  Future<String> addedLinesDiff() async => (await _git(['diff', 'origin/$baseBranch...HEAD', '--unified=0'])).stdout;
 
   /// The golden images that were added or changed. Empty when the project
   /// has no golden folder.

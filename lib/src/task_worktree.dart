@@ -22,12 +22,19 @@ class TaskWorktree {
 
   String get runnerDirectory => '$directory/$runnerFolder';
 
-  /// Written by [start]: the task id, the tool and the model of each stage.
+  /// Written by [start]: the task file, the tool and the model of each stage.
   String get runFile => '$runnerDirectory/run.json';
 
   /// The tool [start] recorded, or null when there is no run file.
   String? get tool => switch (_run) {
     {'tool': final String tool} => tool,
+    _ => null,
+  };
+
+  /// The task [start] recorded, as it was when the run started, so the later
+  /// commands need no network and still find it once it is moved to `done/`.
+  Task? task({required String root}) => switch (_run) {
+    {'taskPath': final String path, 'taskText': final String text} => Task.tryParse(path: path, text: text, root: root),
     _ => null,
   };
 
@@ -45,12 +52,32 @@ class TaskWorktree {
   }
 
   /// Where the worktree of [task] lives inside [projectRoot].
-  static String pathOf({required String projectRoot, required Task task}) => '$projectRoot/$folder/${task.id}';
+  static String pathOf({required String projectRoot, required Task task}) => pathOfId(projectRoot, task.id);
+
+  /// Where the worktree of the task [id] lives inside [projectRoot].
+  static String pathOfId(String projectRoot, String id) => '$projectRoot/$folder/$id';
+
+  /// Runs the project's [checks] in order inside the worktree and stops at the
+  /// first failure. Only the failing command and the end of its output are
+  /// kept, so a long test run does not fill the caller's context.
+  Future<CheckRun> runChecks({required RunCommand run, required List<List<String>> checks}) async {
+    for (final [program, ...args] in checks) {
+      final result = await run(program, args, workingDirectory: directory);
+      if (result.ok) continue;
+      final lines = '${result.stdout}\n${result.stderr}'.trim().split('\n');
+      return CheckRun(
+        failed: [program, ...args].join(' '),
+        tail: lines.skip(lines.length > CheckRun.tailLines ? lines.length - CheckRun.tailLines : 0).join('\n'),
+      );
+    }
+    return const CheckRun();
+  }
 
   /// Creates the worktree and the task branch from `origin/<baseBranch>`,
   /// runs the project's setup commands in it and pushes the branch, so other
-  /// threads see the task as busy. With [resume], it continues the task
-  /// branch already on the remote instead. Throws a [StateError] with a
+  /// threads see the task as busy. When the task
+  /// branch is already on the remote and ends with a blocked run's `wip:`
+  /// commit, it continues that branch instead. Throws a [StateError] with a
   /// readable message and removes what it created on any error.
   static Future<TaskWorktree> start({
     required RunCommand run,
@@ -62,7 +89,6 @@ class TaskWorktree {
     required Map<Role, RoleModel> models,
     required String email,
     String? emailSuffix,
-    bool resume = false,
   }) async {
     if (emailSuffix != null && !email.endsWith(emailSuffix)) {
       throw StateError('The git email "$email" does not end with "$emailSuffix" (git_email_suffix).');
@@ -86,22 +112,24 @@ class TaskWorktree {
     ], workingDirectory: projectRoot)).ok) {
       throw StateError('The local branch ${task.branch} already exists. Delete it or finish its work first.');
     }
-    final onRemote = (await git(['ls-remote', '--heads', 'origin', task.branch])).isNotEmpty;
-    if (onRemote && !resume) {
+    final resume = (await git(['ls-remote', '--heads', 'origin', task.branch])).isNotEmpty;
+    await git(['fetch', '--quiet', 'origin', resume ? task.branch : baseBranch]);
+    if (resume && !(await git(['log', '-1', '--format=%s', 'FETCH_HEAD'])).startsWith('wip: ')) {
       throw StateError(
-        '${task.label} already has the branch ${task.branch} on the remote. Pass --resume to continue it.',
+        '${task.label} is already claimed: ${task.branch} is on the remote and is not a blocked run. '
+        'If no thread is working on it, delete that remote branch and start again.',
       );
     }
-    if (!onRemote && resume) throw StateError('There is no branch ${task.branch} on the remote to resume.');
-
-    await git(['fetch', '--quiet', 'origin', resume ? task.branch : baseBranch]);
     await _excludeFolder(projectRoot, git);
     await git(['worktree', 'add', '--quiet', '-b', task.branch, worktree.directory, 'FETCH_HEAD']);
     try {
+      final taskFile = File('${worktree.directory}/${task.indexPath}');
+      if (!taskFile.existsSync()) throw StateError('${task.indexPath} is not on ${task.branch}.');
       Directory(worktree.runnerDirectory).createSync();
       File(worktree.runFile).writeAsStringSync(
         jsonEncode({
-          'taskId': task.id,
+          'taskPath': task.indexPath,
+          'taskText': taskFile.readAsStringSync(),
           'tool': tool,
           'models': {for (final MapEntry(key: role, value: model) in models.entries) role.name: model.toJson()},
         }),
@@ -113,7 +141,9 @@ class TaskWorktree {
           run: run,
           baseBranch: baseBranch,
         ).push(task.branch);
-        if (error != null) throw StateError(error);
+        if (error != null) {
+          throw StateError('Could not claim ${task.label}: $error');
+        }
       }
     } catch (_) {
       await worktree.remove(run: run, projectRoot: projectRoot, branch: task.branch);
@@ -159,4 +189,17 @@ class TaskWorktree {
       );
     }
   }
+}
+
+/// The result of [TaskWorktree.runChecks]: [failed] is the first command that
+/// failed, or null when all passed.
+class CheckRun {
+  static const tailLines = 40;
+
+  final String? failed;
+  final String tail;
+
+  const CheckRun({this.failed, this.tail = ''});
+
+  bool get passed => failed == null;
 }

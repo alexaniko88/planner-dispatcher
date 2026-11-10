@@ -30,7 +30,13 @@ void main() {
   group('CommitMessage', () {
     test('accepts a lowercase subject with a configured type', () {
       expect(CommitMessage.problem('feat: add the thing', types: _types), isNull);
-      expect(CommitMessage.problem('test: cover `x`', types: _types), isNull);
+      expect(CommitMessage.problem('test: cover the store', types: _types), isNull);
+    });
+
+    test('rejects a subject longer than 72 characters or starting with a backtick', () {
+      expect(CommitMessage.problem('feat: ${'a' * 66}', types: _types), isNull);
+      expect(CommitMessage.problem('feat: ${'a' * 67}', types: _types), isNotNull);
+      expect(CommitMessage.problem('test: `x` covered', types: _types), isNotNull);
     });
 
     test('rejects a type that is not configured, including wip', () {

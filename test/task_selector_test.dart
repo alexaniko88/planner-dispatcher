@@ -121,7 +121,7 @@ void main() {
     test('a draft task is never offered', () async {
       final tasks = await _load({'$root/01-a/index.md': _task(id: 'E-01-01', status: 'draft')});
 
-      expect(TaskSelector(tasks: tasks).next(), isNull);
+      expect(TaskSelector(tasks: tasks).candidates(), isEmpty);
     });
 
     test('waits for a dependency until it is in done/', () async {
@@ -138,7 +138,7 @@ void main() {
       files.remove('$root/01-a/index.md');
       selector = TaskSelector(tasks: await _load(files));
 
-      expect(selector.next()?.id, 'E-01-02');
+      expect(selector.candidates().map((task) => task.id), ['E-01-02']);
     });
 
     test('a task that overlaps a running task waits', () async {
@@ -158,16 +158,7 @@ void main() {
       final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: ['feat/e-01-01-a', 'fix/other']);
 
       expect(busy, {'E-01-01'});
-      expect(TaskSelector(tasks: tasks, busyIds: busy).next(), isNull);
-    });
-
-    test('a skipped task is not offered', () async {
-      final tasks = await _load({
-        '$root/01-a/index.md': _task(id: 'E-01-01'),
-        '$root/02-b/index.md': _task(id: 'E-01-02', touches: '[lib/b/**]'),
-      });
-
-      expect(TaskSelector(tasks: tasks).next(skipped: {'E-01-01'})?.id, 'E-01-02');
+      expect(TaskSelector(tasks: tasks, busyIds: busy).candidates(), isEmpty);
     });
   });
 }

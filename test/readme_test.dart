@@ -10,6 +10,7 @@ void main() {
     for (final command in [
       'planner_dispatcher:dispatcher check',
       'planner_dispatcher:dispatcher start',
+      'planner_dispatcher:dispatcher checks',
       'planner_dispatcher:dispatcher commit',
       'planner_dispatcher:dispatcher finish',
       'planner_dispatcher:dispatcher block',

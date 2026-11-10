@@ -4,8 +4,12 @@ import 'git_publisher.dart';
 /// The checks every push of a task or planning branch must pass: the branch
 /// is not the base branch, the git email has the configured suffix, every
 /// commit subject follows the commit rule and no added line holds private
-/// data. A blocked task's `wip:` commit is the one exception to the rule.
+/// data. A blocked task's `wip:` commit and the fixed commit that closes a
+/// task are the exceptions to the rule.
 class Guard {
+  /// The start of the fixed subject of the commit that closes a task.
+  static const closingPrefix = 'docs: close task ';
+
   final RunCommand run;
   final String directory;
   final String baseBranch;
@@ -38,7 +42,7 @@ class Guard {
 
     final subjects = await git(['log', '--format=%s', 'origin/$baseBranch..HEAD']);
     for (final subject in subjects.split('\n').where((line) => line.isNotEmpty)) {
-      if (subject.startsWith('wip: ')) continue;
+      if (subject.startsWith('wip: ') || subject.startsWith(closingPrefix)) continue;
       if (CommitMessage.problem(subject, types: commitTypes) case final problem?) problems.add(problem);
     }
 

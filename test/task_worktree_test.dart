@@ -17,10 +17,9 @@ String _git(String directory, List<String> args) {
   return (result.stdout as String).trim();
 }
 
-final _task = Task.tryParse(
-  path: 'docs/backlog/epic-tst/stories/story-01-s/task-01-do-thing/index.md',
-  text: '---\nid: TST-01-01\nstatus: ready\ntype: feat\n---\n\n# Do thing\n',
-)!;
+const _taskPath = 'docs/backlog/epic-tst/stories/story-01-s/task-01-do-thing/index.md';
+const _taskText = '---\nid: TST-01-01\nstatus: ready\ntype: feat\n---\n\n# Do thing\n';
+final _task = Task.tryParse(path: _taskPath, text: _taskText)!;
 
 void main() {
   late String origin;
@@ -36,7 +35,7 @@ void main() {
     return runSystemCommand(executable, args, workingDirectory: workingDirectory);
   }
 
-  Future<TaskWorktree> start({bool resume = false, String email = _email}) => TaskWorktree.start(
+  Future<TaskWorktree> start({String email = _email}) => TaskWorktree.start(
     run: run,
     task: _task,
     projectRoot: project,
@@ -48,7 +47,6 @@ void main() {
     models: RoleModels.suggest(tool: 'codex'),
     email: email,
     emailSuffix: '@users.noreply.github.com',
-    resume: resume,
   );
 
   bool originHas(String branch) =>
@@ -67,6 +65,9 @@ void main() {
     _git(project, ['config', 'user.email', _email]);
     _git(project, ['config', 'user.name', 'Me']);
     File('$project/README.md').writeAsStringSync('hi\n');
+    File('$project/$_taskPath')
+      ..createSync(recursive: true)
+      ..writeAsStringSync(_taskText);
     _git(project, ['add', '.']);
     _git(project, ['commit', '-q', '-m', 'chore: start']);
     _git(project, ['push', '-q', 'origin', 'main']);
@@ -78,6 +79,7 @@ void main() {
     expect(worktree.directory, '$project/.worktrees/TST-01-01');
     expect(_git(worktree.directory, ['branch', '--show-current']), _task.branch);
     expect(worktree.tool, 'codex');
+    expect(worktree.task(root: 'docs/backlog')?.indexPath, _taskPath, reason: 'the task is read with no network');
     expect(worktree.models[Role.reviewer]?.displayName, 'GPT-6.1 Sol');
     expect(setupCalls, ['dart pub get in TST-01-01']);
     expect(originHas(_task.branch), isTrue);
@@ -88,17 +90,23 @@ void main() {
     );
   });
 
-  test('refuses a task whose branch is already on the remote, unless resumed', () async {
+  test('refuses a task another thread claimed, and continues a blocked run on its own', () async {
     final first = await start();
-    File('${first.directory}/work.txt').writeAsStringSync('half\n');
-    _git(first.directory, ['add', '.']);
-    _git(first.directory, ['commit', '-q', '-m', 'wip: half']);
-    _git(first.directory, ['push', '-q', 'origin', 'HEAD:${_task.branch}']);
     await first.remove(run: run, projectRoot: project, branch: _task.branch);
 
-    await expectLater(start(), throwsA(isA<StateError>().having((e) => e.message, 'message', contains('--resume'))));
+    await expectLater(
+      start(),
+      throwsA(isA<StateError>().having((e) => e.message, 'message', contains('already claimed'))),
+    );
 
-    final resumed = await start(resume: true);
+    final blocked = TaskWorktree('$project/../blocked');
+    _git(project, ['worktree', 'add', '-q', '-b', 'tmp', blocked.directory, 'origin/${_task.branch}']);
+    File('${blocked.directory}/work.txt').writeAsStringSync('half\n');
+    _git(blocked.directory, ['add', '.']);
+    _git(blocked.directory, ['commit', '-q', '-m', 'wip: tst-01-01 do-thing stopped']);
+    _git(blocked.directory, ['push', '-q', 'origin', 'HEAD:${_task.branch}']);
+
+    final resumed = await start();
     expect(File('${resumed.directory}/work.txt').readAsStringSync(), 'half\n');
   });
 
@@ -114,6 +122,38 @@ void main() {
   test('refuses another git email before changing anything', () async {
     await expectLater(start(email: 'me@work.com'), throwsA(isA<StateError>()));
     expect(Directory('$project/.worktrees').existsSync(), isFalse);
+  });
+
+  test('runChecks runs every check in the worktree and keeps only the end of a failure', () async {
+    final worktree = await start();
+    final calls = <String>[];
+    Future<CommandResult> checks(String executable, List<String> args, {String? workingDirectory}) async {
+      calls.add('${args.join(' ')} in ${workingDirectory?.split('/').last}');
+      final fails = args.first == 'test';
+      final output = List.generate(100, (index) => 'line $index').join('\n');
+      return CommandResult(exitCode: fails ? 1 : 0, stdout: fails ? output : 'ok', stderr: '');
+    }
+
+    final passed = await worktree.runChecks(
+      run: checks,
+      checks: [
+        ['dart', 'analyze'],
+      ],
+    );
+    expect(passed.passed, isTrue);
+
+    final failed = await worktree.runChecks(
+      run: checks,
+      checks: [
+        ['dart', 'analyze'],
+        ['dart', 'test'],
+        ['dart', 'format'],
+      ],
+    );
+    expect(failed.failed, 'dart test');
+    expect(failed.tail.split('\n'), hasLength(CheckRun.tailLines));
+    expect(failed.tail.split('\n').last, 'line 99');
+    expect(calls, ['analyze in TST-01-01', 'analyze in TST-01-01', 'test in TST-01-01']);
   });
 
   test('remove deletes the folder and the local branch but keeps the remote branch', () async {

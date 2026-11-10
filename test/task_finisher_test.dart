@@ -37,7 +37,8 @@ const _config = DispatcherConfig(
     ['dart', 'test'],
   ],
   rules: [],
-  commitTypes: ['feat', 'docs', 'test'],
+  // No `docs`: the closing commit must pass anyway.
+  commitTypes: ['feat', 'test'],
   gitEmailSuffix: '@users.noreply.github.com',
 );
 
@@ -69,10 +70,14 @@ void main() {
   late String project;
   late Task task;
   final ghCalls = <List<String>>[];
+  var openPr = '';
+  var createFails = false;
 
   Future<CommandResult> run(String executable, List<String> args, {String? workingDirectory}) async {
     if (executable == 'gh') {
       ghCalls.add(args);
+      if (args[1] == 'view') return CommandResult(exitCode: openPr.isEmpty ? 1 : 0, stdout: openPr, stderr: '');
+      if (createFails) return const CommandResult(exitCode: 1, stdout: '', stderr: 'gh: not logged in');
       return const CommandResult(exitCode: 0, stdout: 'https://github.com/owner/repo/pull/7\n', stderr: '');
     }
     return runSystemCommand(executable, args, workingDirectory: workingDirectory);
@@ -111,6 +116,8 @@ void main() {
 
   setUp(() {
     ghCalls.clear();
+    openPr = '';
+    createFails = false;
     final root = Directory.systemTemp.createTempSync('task_finisher_test_').resolveSymbolicLinksSync();
     addTearDown(() => Directory(root).deleteSync(recursive: true));
     origin = '$root/github.com/owner/repo.git';
@@ -162,7 +169,7 @@ void main() {
         'feat: add the thing',
         'docs: add the task',
       ]);
-      final create = ghCalls.single;
+      final create = ghCalls.last;
       expect(
         create,
         containsAllInOrder(['pr', 'create', '--base', 'main', '--head', task.branch, '--title', 'feat: do thing']),
@@ -170,6 +177,59 @@ void main() {
       expect(Directory(finisher.worktree.directory).existsSync(), isFalse);
       final done = _git(origin, ['ls-tree', '-r', '--name-only', task.branch]);
       expect(done, contains('docs/backlog/done/epic-tst/stories/done/story-01-s/done/task-01-do-thing/notes.md'));
+    });
+
+    test('finish runs again after the PR could not be opened, without closing the task twice', () async {
+      final finisher = await started();
+      write(finisher, 'lib/thing.dart', 'void thing() {}\n');
+      await finisher.commit(role: Role.implementer, message: 'feat: add the thing');
+      write(finisher, '.runner/report.md', _report);
+      createFails = true;
+
+      await expectLater(
+        finisher.finish(),
+        throwsA(isA<StateError>().having((e) => e.message, 'message', contains('finish` again'))),
+      );
+      expect(Directory(finisher.worktree.directory).existsSync(), isTrue);
+
+      createFails = false;
+      expect(await finisher.finish(), 'https://github.com/owner/repo/pull/7');
+      expect(originLog('%s').split('\n'), [
+        'docs: close task tst-01-01 do-thing',
+        'feat: add the thing',
+        'docs: add the task',
+      ]);
+      expect(Directory(finisher.worktree.directory).existsSync(), isFalse);
+    });
+
+    test('finish reuses the PR already open for the branch', () async {
+      final finisher = await started();
+      write(finisher, 'lib/thing.dart', 'void thing() {}\n');
+      await finisher.commit(role: Role.implementer, message: 'feat: add the thing');
+      write(finisher, '.runner/report.md', _report);
+      openPr = 'https://github.com/owner/repo/pull/3\n';
+
+      expect(await finisher.finish(), 'https://github.com/owner/repo/pull/3');
+      expect(ghCalls.where((call) => call[1] == 'create'), isEmpty);
+    });
+
+    test('finish with private data in the report changes nothing', () async {
+      final finisher = await started();
+      write(finisher, 'lib/thing.dart', 'void thing() {}\n');
+      await finisher.commit(role: Role.implementer, message: 'feat: add the thing');
+      write(
+        finisher,
+        '.runner/report.md',
+        '$_report\nSee ${['', 'Us'
+            'ers', 'someone', 'x'].join('/')}\n',
+      );
+
+      await expectLater(
+        finisher.finish(),
+        throwsA(isA<StateError>().having((e) => e.message, 'message', contains('home path'))),
+      );
+      expect(Directory('${finisher.worktree.directory}/$_taskDirectory').existsSync(), isTrue);
+      expect(originLog('%s').split('\n').first, 'docs: add the task');
     });
 
     test('finish refuses uncommitted work or a missing report and pushes nothing new', () async {

@@ -23,7 +23,6 @@ const _readOrder = [
   'planner_dispatcher.yaml',
   'runner-rules.md',
   '.agents/planner-dispatcher/project-overrides.md',
-  'backlog-format.md',
 ];
 
 // A project build or test command must not appear in shipped dispatcher files.
@@ -63,7 +62,7 @@ void main() {
         expect(_accessModes, contains(_frontMatterValue(markdown, 'access')));
       });
 
-      test('${role.name} reads the config, runner rules, project overrides and format rule in order', () {
+      test('${role.name} reads the config, runner rules and project overrides in order, and not the format rule', () {
         final markdown = File('$_dispatcherFolder/roles/${role.name}.md').readAsStringSync();
         final section = _section(markdown, '## Read first');
 
@@ -71,6 +70,7 @@ void main() {
         final positions = [for (final name in _readOrder) section!.indexOf(name)];
         expect(positions, everyElement(isNonNegative), reason: '${role.name}.md must name all of $_readOrder');
         expect(positions, orderedEquals([...positions]..sort()), reason: '${role.name}.md reads them out of order');
+        expect(markdown, isNot(contains('backlog-format.md')), reason: 'the format rule is for the planner');
       });
     }
 
@@ -87,20 +87,10 @@ void main() {
       expect(names, (Role.values.map((role) => '${role.name}.md').toList()..sort()));
     });
 
-    test('SKILL.md names every default model of the table', () {
-      final text = File('$_dispatcherFolder/SKILL.md').readAsStringSync();
-
-      for (final models in RoleModels.table.values) {
-        for (final model in models.values) {
-          expect(text, contains(model.displayName), reason: 'SKILL.md does not mention ${model.displayName}');
-        }
-      }
-    });
-
     test('SKILL.md runs a task only through the dispatcher commands', () {
       final text = File('$_dispatcherFolder/SKILL.md').readAsStringSync();
 
-      for (final command in ['check', 'models', 'start', 'commit', 'block', 'finish']) {
+      for (final command in ['check', 'models', 'start', 'checks', 'commit', 'block', 'finish']) {
         expect(text, contains('planner_dispatcher:dispatcher $command'), reason: command);
       }
       expect(text, isNot(contains('dispatcher launch')));

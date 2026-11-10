@@ -26,10 +26,9 @@ class TaskSelector {
   };
 
   /// Why [task] cannot start now, or null when it can.
-  String? blockReason(Task task, {Set<String> skipped = const {}}) {
+  String? blockReason(Task task) {
     if (task.isDone) return 'already done';
     if (task.status != 'ready') return 'status is ${task.status}';
-    if (skipped.contains(task.id)) return 'skipped';
     if (busyIds.contains(task.id)) return 'already has a branch or an open PR';
 
     final known = {for (final other in tasks) other.id};
@@ -48,13 +47,5 @@ class TaskSelector {
   }
 
   /// Tasks that can start now, in path order.
-  List<Task> candidates({Set<String> skipped = const {}}) {
-    return tasks.where((task) => blockReason(task, skipped: skipped) == null).toList();
-  }
-
-  /// The first task that can start now, or null.
-  Task? next({Set<String> skipped = const {}}) {
-    final all = candidates(skipped: skipped);
-    return all.isEmpty ? null : all.first;
-  }
+  List<Task> candidates() => tasks.where((task) => blockReason(task) == null).toList();
 }

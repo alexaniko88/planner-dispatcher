@@ -5,7 +5,8 @@
 //   <dart> run planner_dispatcher:dispatcher check
 //   <dart> run planner_dispatcher:dispatcher models <ID> --tool=<tool>
 //   <dart> run planner_dispatcher:dispatcher start <ID> --tool=<tool>
-//       [--implementer=M[:EFFORT]] [--tests=M[:EFFORT]] [--reviewer=M[:EFFORT]] [--resume]
+//       [--implementer=M[:EFFORT]] [--tests=M[:EFFORT]] [--reviewer=M[:EFFORT]]
+//   <dart> run planner_dispatcher:dispatcher checks <ID>
 //   <dart> run planner_dispatcher:dispatcher commit <ID> --role=implementer|tests|reviewer --message="<subject>"
 //   <dart> run planner_dispatcher:dispatcher finish <ID>
 //   <dart> run planner_dispatcher:dispatcher block <ID> --question="<text>" | --question-file=<path>
@@ -46,6 +47,7 @@ Future<void> main(List<String> args) async {
   final code = switch (args.first) {
     'check' => await _check(),
     'start' => await _start(rest),
+    'checks' => await _checks(rest),
     'commit' => await _commit(rest),
     'finish' => await _finish(rest),
     'block' => await _block(rest),
@@ -56,13 +58,13 @@ Future<void> main(List<String> args) async {
   exit(code);
 }
 
-const _commands = {'check', 'models', 'start', 'commit', 'finish', 'block', 'guard'};
+const _commands = {'check', 'models', 'start', 'checks', 'commit', 'finish', 'block', 'guard'};
 
 late final DispatcherConfig _config;
 
 int _usage() {
   stderr.writeln(
-    'Usage: <dart> run planner_dispatcher:dispatcher check | models <ID> --tool=<tool> | start <ID> --tool=<tool> '
+    'Usage: <dart> run planner_dispatcher:dispatcher check | models <ID> --tool=<tool> | start <ID> --tool=<tool> | checks <ID> '
     '| commit <ID> --role=<role> --message=<subject> | finish <ID> | block <ID> --question=<text> | guard',
   );
   return 64;
@@ -83,12 +85,17 @@ Future<List<Task>> _tasksOnBase() async {
 }
 
 /// The branches on the remote and the heads of the open PRs.
-Future<List<String>> _branchNames() async {
+Future<List<String>> _branchNames() async => [...await _remoteBranches(), ...await _openPrHeads()];
+
+Future<List<String>> _remoteBranches() async {
   final remote = await _output('git', ['ls-remote', '--heads', 'origin']);
-  final names = [
+  return [
     for (final line in remote.split('\n'))
       if (line.contains('refs/heads/')) line.split('refs/heads/').last.trim(),
   ];
+}
+
+Future<List<String>> _openPrHeads() async {
   final pulls = await _output('gh', [
     'pr',
     'list',
@@ -99,7 +106,7 @@ Future<List<String>> _branchNames() async {
     '--jq',
     '.[].headRefName',
   ]);
-  return [...names, ...pulls.split('\n').where((name) => name.isNotEmpty)];
+  return pulls.split('\n').where((name) => name.isNotEmpty).toList();
 }
 
 Map<String, Object?> _taskJson(Task task) => {
@@ -182,13 +189,12 @@ Future<int> _models(List<String> args) async {
 
 /// Creates the task worktree and branch, runs the setup and claims the task,
 /// with the suggested models and any the user typed instead. Prints what the
-/// coordinating agent needs: the task, the worktree, the subagent call of
-/// each stage and the check commands.
+/// coordinating agent needs: the task, the worktree and the subagent call of
+/// each stage.
 Future<int> _start(List<String> args) async {
   final options = args.options;
   final tool = options['tool'] ?? '';
   if (tool.isEmpty) return _usage();
-  final resume = options['resume'] == 'true';
 
   final tasks = await _tasksOnBase();
   final task = await _task(args, from: tasks);
@@ -206,7 +212,13 @@ Future<int> _start(List<String> args) async {
     stderr.writeln('There is no suggested model for $tool: pass ${missing.join(', ')}.');
     return 1;
   }
-  final busy = resume ? <String>{} : TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames());
+  if ((await _openPrHeads()).contains(task.branch)) {
+    stderr.writeln('${task.label} already has an open PR.');
+    return 1;
+  }
+  // The task's own branch is checked by TaskWorktree.start: a blocked run is
+  // continued, a claimed one refused.
+  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames())..remove(task.id);
   if (TaskSelector(tasks: tasks, busyIds: busy).blockReason(task) case final reason?) {
     stderr.writeln('${task.label} cannot start: $reason.');
     return 1;
@@ -223,7 +235,6 @@ Future<int> _start(List<String> args) async {
       models: models,
       email: await _output('git', ['config', 'user.email']),
       emailSuffix: _config.gitEmailSuffix,
-      resume: resume,
     );
   } on StateError catch (error) {
     stderr.writeln(error.message);
@@ -239,20 +250,47 @@ Future<int> _start(List<String> args) async {
         for (final MapEntry(key: role, value: model) in models.entries)
           role.name: {'name': model.displayName, 'call': model.callParameters(tool)},
       },
-      'check': [for (final command in _config.check) command.join(' ')],
     }),
   );
   return 0;
 }
 
+/// Runs the project's check commands in the worktree of a started task and
+/// prints only whether they passed, or the failing command and the end of its
+/// output. Exits 1 when one fails.
+Future<int> _checks(List<String> args) async {
+  final ids = args.positional;
+  if (ids.length != 1) return _usage();
+  final worktree = TaskWorktree(TaskWorktree.pathOfId(Directory.current.path, ids.first));
+  if (!Directory(worktree.directory).existsSync()) {
+    stderr.writeln('${ids.first} has no worktree here: run `dispatcher start ${ids.first}` first.');
+    return 1;
+  }
+  final result = await worktree.runChecks(run: runSystemCommand, checks: _config.check);
+  stdout.writeln(
+    const JsonEncoder.withIndent('  ').convert({
+      'passed': result.passed,
+      'commands': [for (final command in _config.check) command.join(' ')],
+      if (!result.passed) 'failed': result.failed,
+      if (!result.passed) 'tail': result.tail,
+    }),
+  );
+  return result.passed ? 0 : 1;
+}
+
 /// The finisher of a task started in this project, or null after printing why.
+/// It reads the task from the worktree's run file, so it needs no network.
 Future<TaskFinisher?> _finisher(List<String> args) async {
-  final task = await _task(args);
-  if (task == null) return null;
-  final worktree = TaskWorktree(TaskWorktree.pathOf(projectRoot: Directory.current.path, task: task));
+  final ids = args.positional;
+  if (ids.length != 1) {
+    _usage();
+    return null;
+  }
+  final worktree = TaskWorktree(TaskWorktree.pathOfId(Directory.current.path, ids.first));
+  final task = worktree.task(root: _config.tasksDir);
   final tool = worktree.tool;
-  if (tool == null) {
-    stderr.writeln('${task.label} was not started here: run `dispatcher start ${task.id}` first.');
+  if (task == null || tool == null) {
+    stderr.writeln('${ids.first} was not started here: run `dispatcher start ${ids.first}` first.');
     return null;
   }
   return TaskFinisher(
@@ -297,10 +335,12 @@ Future<int> _finish(List<String> args) async {
 
 Future<int> _block(List<String> args) async {
   final options = args.options;
-  final question = switch (options['question-file']) {
-    final String path => File(path).existsSync() ? File(path).readAsStringSync() : '',
-    null => options['question'] ?? '',
-  };
+  final questionFile = options['question-file'];
+  if (questionFile != null && !File(questionFile).existsSync()) {
+    stderr.writeln('$questionFile does not exist: write the question there first.');
+    return 1;
+  }
+  final question = questionFile != null ? File(questionFile).readAsStringSync() : options['question'] ?? '';
   if (question.trim().isEmpty) return _usage();
   final finisher = await _finisher(args);
   if (finisher == null) return 1;
