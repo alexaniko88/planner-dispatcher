@@ -68,16 +68,25 @@ class Task {
         .toList();
   }
 
-  /// Returns null when [path] is not a task `index.md` (an epic or story has no `id`).
+  /// What a task id may hold. The id names the worktree folder and the
+  /// branch, so it never holds `/`, `.` or a leading `-`.
+  static final idPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9-]*$');
+
+  static final _typePattern = RegExp(r'^[a-z]+$');
+
+  /// Returns null when [path] is not a task `index.md` (an epic or story has
+  /// no `id`), or when its id or type could not name a folder and a branch.
   static Task? tryParse({required String path, required String text, String root = ''}) {
     if (!path.endsWith('/index.md')) return null;
     final front = text.frontMatter;
     final id = _scalar(front['id']);
-    if (id == null) return null;
+    if (id == null || !idPattern.hasMatch(id)) return null;
+    final type = _scalar(front['type']) ?? 'feat';
+    if (!_typePattern.hasMatch(type)) return null;
     return Task(
       id: id,
       status: _scalar(front['status']) ?? 'draft',
-      type: _scalar(front['type']) ?? 'feat',
+      type: type,
       complexity: _complexity(_scalar(front['complexity'])),
       dependsOn: _list(front['depends-on']),
       touches: _list(front['touches']),

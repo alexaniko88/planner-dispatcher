@@ -261,6 +261,35 @@ void main() {
       expect(notes, contains('## Blocked\n\nWhich store should it use?'));
       expect(Directory(finisher.worktree.directory).existsSync(), isFalse);
     });
+
+    test('block runs again after a failed push and writes the question once', () async {
+      final finisher = await started();
+      write(finisher, 'lib/thing.dart', 'void thing() {}\n');
+      _git(project, ['config', 'user.email', 'me@work.com']);
+
+      await expectLater(finisher.block('Which store?'), throwsA(isA<StateError>()));
+      _git(project, ['config', 'user.email', _email]);
+      _git(finisher.worktree.directory, ['commit', '-q', '--amend', '--no-edit', '--reset-author']);
+      await finisher.block('Which store?');
+
+      final notes = _git(origin, ['show', '${task.branch}:$_taskDirectory/notes.md']);
+      expect('## Blocked'.allMatches(notes), hasLength(1));
+    });
+
+    test('block after a finish that closed the task writes in the closed task folder', () async {
+      final finisher = await started();
+      write(finisher, 'lib/thing.dart', 'void thing() {}\n');
+      await finisher.commit(role: Role.implementer, message: 'feat: add the thing');
+      write(finisher, '.runner/report.md', _report);
+      createFails = true;
+      await expectLater(finisher.finish(), throwsA(isA<StateError>()));
+
+      await finisher.block('Should it open the PR by hand?');
+
+      final files = _git(origin, ['ls-tree', '-r', '--name-only', task.branch]);
+      expect(files, contains('done/task-01-do-thing/notes.md'));
+      expect(files, isNot(contains('$_taskDirectory/notes.md')));
+    });
   });
 
   group('Guard', () {
@@ -302,6 +331,39 @@ void main() {
         problems.join('\n'),
         allOf(contains('"main"'), contains('me@work.com'), contains('Add a'), contains('home path')),
       );
+    });
+
+    test('checks every commit: its email, and data added and removed again', () async {
+      final finisher = await started();
+      final directory = finisher.worktree.directory;
+      final home = [
+        '',
+        'Us'
+            'ers',
+        'someone',
+        'x',
+      ].join('/');
+      write(finisher, 'lib/a.dart', 'const p = "$home";\n');
+      _git(directory, ['add', '.']);
+      _git(directory, ['-c', 'user.email=me@work.com', 'commit', '-q', '-m', 'feat: add a']);
+      write(finisher, 'lib/a.dart', 'const p = "";\n');
+      await finisher.commit(role: Role.implementer, message: 'feat: drop the path');
+
+      final problems = (await guard(directory).problems()).join('\n');
+
+      expect(problems, allOf(contains('me@work.com'), contains('lib/a.dart has a local home path')));
+    });
+
+    test('a git command that fails is a problem, so a wrong base branch never passes', () async {
+      final finisher = await started();
+      final problems = await Guard(
+        run: run,
+        directory: finisher.worktree.directory,
+        baseBranch: 'develop',
+        commitTypes: _config.commitTypes,
+      ).problems();
+
+      expect(problems.join('\n'), contains('Could not check the branch'));
     });
   });
 

@@ -75,6 +75,15 @@ void main() {
       expect(Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\nabbr: X\n---\n# Epic\n'), isNull);
     });
 
+    test('an id or type that could leave the worktree folder or pass as a flag is not a task', () {
+      Task? parse(String front) => Task.tryParse(path: 'docs/backlog/x/index.md', text: '---\n$front\n---\n# T\n');
+
+      expect(parse('id: ../x'), isNull);
+      expect(parse('id: -x'), isNull);
+      expect(parse('id: X-01\ntype: --upload-pack=x'), isNull);
+      expect(parse('id: X-01\ntype: fix')?.branch, startsWith('fix/'));
+    });
+
     test('a backlog folder named done does not make its tasks done', () {
       final task = Task.tryParse(
         path: 'work/done/backlog/epic-x/stories/story-01-s/task-01-t/index.md',

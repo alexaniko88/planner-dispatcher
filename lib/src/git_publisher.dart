@@ -28,20 +28,28 @@ class DiffScanner {
       '-----BEGIN [A-Z ]*PRIVATE '
       'KEY-----',
     ),
-    'a GitHub token': RegExp('gh[pousr]_[A-Za-z0-9]{30,}'),
-    'a secret key': RegExp('sk-[A-Za-z0-9]{20,}'),
+    'a GitHub token': RegExp('gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'),
+    'a secret key': RegExp('(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}'),
   };
 
   /// One text per finding: the file and what was found. [diff] is
-  /// `git diff --unified=0` output. [extra] adds the project's
-  /// `private_patterns`, keyed by what they find.
+  /// `git diff --unified=0` or `git log -p --unified=0` output. Only the
+  /// header of each file, from `diff --git` to the first `@@`, names the file,
+  /// so an added line that starts with `++` is still scanned. [extra] adds the
+  /// project's `private_patterns`, keyed by what they find.
   static List<String> scan(String diff, {Map<String, RegExp> extra = const {}}) {
     final rules = {..._rules, ...extra};
-    final findings = <String>[];
+    final findings = <String>{};
     var file = '';
+    var header = false;
     for (final line in diff.split('\n')) {
-      if (line.startsWith('+++ ')) {
-        file = line.substring(4).replaceFirst(RegExp(r'^b/'), '');
+      if (line.startsWith('diff --git ')) {
+        header = true;
+        continue;
+      }
+      if (header) {
+        if (line.startsWith('+++ ')) file = line.substring(4).replaceFirst(RegExp(r'^b/'), '');
+        if (line.startsWith('@@')) header = false;
         continue;
       }
       if (!line.startsWith('+')) continue;
@@ -49,7 +57,7 @@ class DiffScanner {
         if (value.hasMatch(line)) findings.add('$file has $key');
       }
     }
-    return findings;
+    return findings.toList();
   }
 }
 

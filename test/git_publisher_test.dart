@@ -62,17 +62,35 @@ void main() {
     ].join('/');
 
     test('finds a local path in an added line, with its file', () {
-      final findings = DiffScanner.scan('+++ b/lib/a.dart\n@@ -0,0 +1 @@\n+const p = "$home";\n');
+      final findings = DiffScanner.scan(
+        'diff --git a/lib/a.dart b/lib/a.dart\n+++ b/lib/a.dart\n@@ -0,0 +1 @@\n+const p = "$home";\n',
+      );
 
       expect(findings, ['lib/a.dart has a local home path']);
     });
 
     test('ignores removed lines and clean additions', () {
-      expect(DiffScanner.scan('+++ b/a\n-const p = "$home";\n+const ok = 1;\n'), isEmpty);
+      expect(DiffScanner.scan('diff --git a/a b/a\n+++ b/a\n@@\n-const p = "$home";\n+const ok = 1;\n'), isEmpty);
+    });
+
+    test('scans an added line that starts with ++, so it cannot pass as a file header', () {
+      final findings = DiffScanner.scan('diff --git a/a b/a\n+++ b/a\n@@ -0,0 +1 @@\n+++ "$home"\n');
+
+      expect(findings, ['a has a local home path']);
+    });
+
+    test('finds the current token formats but not a task folder name', () {
+      String added(String text) => 'diff --git a/a b/a\n+++ b/a\n@@ -0,0 +1 @@\n+$text\n';
+      final key = ['sk', 'ant', 'api03', 'a' * 30].join('-');
+      final pat = ['github', 'pat', 'A' * 30].join('_');
+
+      expect(DiffScanner.scan(added('key = $key')), ['a has a secret key']);
+      expect(DiffScanner.scan(added('token = $pat')), ['a has a GitHub token']);
+      expect(DiffScanner.scan(added('docs/backlog/task-01-save-the-template-of-the-store/index.md')), isEmpty);
     });
 
     test('adds the project patterns to the built-in ones', () {
-      const diff = '+++ b/a.md\n@@ -0,0 +1 @@\n+mail me@example.com\n';
+      const diff = 'diff --git a/a.md b/a.md\n+++ b/a.md\n@@ -0,0 +1 @@\n+mail me@example.com\n';
 
       expect(DiffScanner.scan(diff), isEmpty);
       expect(DiffScanner.scan(diff, extra: {'a company email': RegExp(r'@example\.com')}), [

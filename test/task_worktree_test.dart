@@ -106,8 +106,22 @@ void main() {
     _git(blocked.directory, ['commit', '-q', '-m', 'wip: tst-01-01 do-thing stopped']);
     _git(blocked.directory, ['push', '-q', 'origin', 'HEAD:${_task.branch}']);
 
+    // The planner plans the task again on the base meanwhile.
+    File('$project/$_taskPath').writeAsStringSync('$_taskText\nPlanned again.\n');
+    _git(project, ['commit', '-q', '-am', 'docs: plan tst-01-01 again']);
+    _git(project, ['push', '-q', 'origin', 'main']);
+
     final resumed = await start();
     expect(File('${resumed.directory}/work.txt').readAsStringSync(), 'half\n');
+    expect(resumed.task(root: 'docs/backlog')?.text, contains('Planned again.'));
+  });
+
+  test('a broken run file reads as a task that was not started', () async {
+    final worktree = await start();
+    File(worktree.runFile).writeAsStringSync('{broken');
+
+    expect(worktree.task(root: 'docs/backlog'), isNull);
+    expect(worktree.tool, isNull);
   });
 
   test('a failing setup removes the worktree and the local branch and claims nothing', () async {

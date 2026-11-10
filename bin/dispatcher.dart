@@ -7,9 +7,9 @@
 //   <dart> run planner_dispatcher:dispatcher start <ID> --tool=<tool>
 //       [--implementer=M[:EFFORT]] [--tests=M[:EFFORT]] [--reviewer=M[:EFFORT]]
 //   <dart> run planner_dispatcher:dispatcher checks <ID>
-//   <dart> run planner_dispatcher:dispatcher commit <ID> --role=implementer|tests|reviewer --message="<subject>"
+//   <dart> run planner_dispatcher:dispatcher commit <ID> --role=implementer|tests|reviewer --message='<subject>'
 //   <dart> run planner_dispatcher:dispatcher finish <ID>
-//   <dart> run planner_dispatcher:dispatcher block <ID> --question="<text>" | --question-file=<path>
+//   <dart> run planner_dispatcher:dispatcher block <ID>
 //   <dart> run planner_dispatcher:dispatcher guard
 //
 // <dart> is the `dart` value of planner_dispatcher.yaml, which every command
@@ -44,7 +44,17 @@ Future<void> main(List<String> args) async {
     exit(78);
   }
   final rest = args.skip(1).toList();
-  final code = switch (args.first) {
+  try {
+    exit(await _run(args.first, rest));
+  } on StateError catch (error) {
+    // A git or gh call that must work, for example with no network.
+    stderr.writeln(error.message);
+    exit(1);
+  }
+}
+
+Future<int> _run(String command, List<String> rest) async {
+  return switch (command) {
     'check' => await _check(),
     'start' => await _start(rest),
     'checks' => await _checks(rest),
@@ -55,7 +65,6 @@ Future<void> main(List<String> args) async {
     'models' => await _models(rest),
     _ => _usage(),
   };
-  exit(code);
 }
 
 const _commands = {'check', 'models', 'start', 'checks', 'commit', 'finish', 'block', 'guard'};
@@ -65,7 +74,7 @@ late final DispatcherConfig _config;
 int _usage() {
   stderr.writeln(
     'Usage: <dart> run planner_dispatcher:dispatcher check | models <ID> --tool=<tool> | start <ID> --tool=<tool> | checks <ID> '
-    '| commit <ID> --role=<role> --message=<subject> | finish <ID> | block <ID> --question=<text> | guard',
+    '| commit <ID> --role=<role> --message=<subject> | finish <ID> | block <ID> | guard',
   );
   return 64;
 }
@@ -75,8 +84,16 @@ Future<String> _output(String executable, List<String> args) async {
   return result.ok ? result.stdout.trim() : '';
 }
 
+/// The output of a command that must work. Throws a [StateError] with its
+/// error, so `check` never shows stale data as if it were current.
+Future<String> _required(String executable, List<String> args) async {
+  final result = await runSystemCommand(executable, args);
+  if (!result.ok) throw StateError('"$executable ${args.join(' ')}" failed: ${result.stderr.trim()}');
+  return result.stdout.trim();
+}
+
 Future<List<Task>> _tasksOnBase() async {
-  await runSystemCommand('git', ['fetch', 'origin', _config.baseBranch, '--quiet']);
+  await _required('git', ['fetch', 'origin', _config.baseBranch, '--quiet']);
   return TaskLoader.fromGit(
     ref: 'origin/${_config.baseBranch}',
     run: runSystemCommand,
@@ -84,11 +101,8 @@ Future<List<Task>> _tasksOnBase() async {
   ).load();
 }
 
-/// The branches on the remote and the heads of the open PRs.
-Future<List<String>> _branchNames() async => [...await _remoteBranches(), ...await _openPrHeads()];
-
 Future<List<String>> _remoteBranches() async {
-  final remote = await _output('git', ['ls-remote', '--heads', 'origin']);
+  final remote = await _required('git', ['ls-remote', '--heads', 'origin']);
   return [
     for (final line in remote.split('\n'))
       if (line.contains('refs/heads/')) line.split('refs/heads/').last.trim(),
@@ -96,11 +110,13 @@ Future<List<String>> _remoteBranches() async {
 }
 
 Future<List<String>> _openPrHeads() async {
-  final pulls = await _output('gh', [
+  final pulls = await _required('gh', [
     'pr',
     'list',
     '--state',
     'open',
+    '--limit',
+    '500',
     '--json',
     'headRefName',
     '--jq',
@@ -126,7 +142,8 @@ Map<String, Object?> _taskJson(Task task) => {
 /// tasks it overlaps with, and why the rest wait.
 Future<int> _check() async {
   final tasks = await _tasksOnBase();
-  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames());
+  final branches = [...await _remoteBranches(), ...await _openPrHeads()];
+  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: branches);
   final selector = TaskSelector(tasks: tasks, busyIds: busy);
   final ready = selector.candidates();
   final waiting = {
@@ -212,13 +229,15 @@ Future<int> _start(List<String> args) async {
     stderr.writeln('There is no suggested model for $tool: pass ${missing.join(', ')}.');
     return 1;
   }
-  if ((await _openPrHeads()).contains(task.branch)) {
+  final pullRequests = await _openPrHeads();
+  if (pullRequests.contains(task.branch)) {
     stderr.writeln('${task.label} already has an open PR.');
     return 1;
   }
   // The task's own branch is checked by TaskWorktree.start: a blocked run is
   // continued, a claimed one refused.
-  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: await _branchNames())..remove(task.id);
+  final branches = [...await _remoteBranches(), ...pullRequests];
+  final busy = TaskSelector.busyIdsFromBranches(tasks: tasks, branches: branches)..remove(task.id);
   if (TaskSelector(tasks: tasks, busyIds: busy).blockReason(task) case final reason?) {
     stderr.writeln('${task.label} cannot start: $reason.');
     return 1;
@@ -260,7 +279,7 @@ Future<int> _start(List<String> args) async {
 /// output. Exits 1 when one fails.
 Future<int> _checks(List<String> args) async {
   final ids = args.positional;
-  if (ids.length != 1) return _usage();
+  if (ids.length != 1 || !Task.idPattern.hasMatch(ids.first)) return _usage();
   final worktree = TaskWorktree(TaskWorktree.pathOfId(Directory.current.path, ids.first));
   if (!Directory(worktree.directory).existsSync()) {
     stderr.writeln('${ids.first} has no worktree here: run `dispatcher start ${ids.first}` first.');
@@ -282,7 +301,7 @@ Future<int> _checks(List<String> args) async {
 /// It reads the task from the worktree's run file, so it needs no network.
 Future<TaskFinisher?> _finisher(List<String> args) async {
   final ids = args.positional;
-  if (ids.length != 1) {
+  if (ids.length != 1 || !Task.idPattern.hasMatch(ids.first)) {
     _usage();
     return null;
   }
@@ -312,6 +331,9 @@ Future<int> _orError(Future<void> Function() action) async {
   } on StateError catch (error) {
     stderr.writeln(error.message);
     return 1;
+  } on FileSystemException catch (error) {
+    stderr.writeln('${error.message}: ${error.path}');
+    return 1;
   }
 }
 
@@ -333,22 +355,21 @@ Future<int> _finish(List<String> args) async {
   });
 }
 
+/// Blocks a started task with the question the coordinator wrote to
+/// `.runner/question.md` of its worktree. Only that file is read, so no other
+/// file of the machine can end up in the pushed notes.
 Future<int> _block(List<String> args) async {
-  final options = args.options;
-  final questionFile = options['question-file'];
-  if (questionFile != null && !File(questionFile).existsSync()) {
-    stderr.writeln('$questionFile does not exist: write the question there first.');
-    return 1;
-  }
-  final question = questionFile != null ? File(questionFile).readAsStringSync() : options['question'] ?? '';
-  if (question.trim().isEmpty) return _usage();
   final finisher = await _finisher(args);
   if (finisher == null) return 1;
+  final file = File('${finisher.worktree.runnerDirectory}/question.md');
+  final question = file.existsSync() ? file.readAsStringSync().trim() : '';
+  if (question.isEmpty) {
+    stderr.writeln('Write the question to ${file.path} first.');
+    return 1;
+  }
   return _orError(() async {
     await finisher.block(question);
-    stdout.writeln(
-      'RESULT ${jsonEncode({'taskId': finisher.task.id, 'outcome': 'blocked', 'message': question.trim()})}',
-    );
+    stdout.writeln('RESULT ${jsonEncode({'taskId': finisher.task.id, 'outcome': 'blocked', 'message': question})}');
   });
 }
 

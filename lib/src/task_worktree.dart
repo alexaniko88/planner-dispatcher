@@ -46,9 +46,15 @@ class TaskWorktree {
     _ => const {},
   };
 
+  /// The run file, or null when it is missing or broken.
   Object? get _run {
     final file = File(runFile);
-    return file.existsSync() ? jsonDecode(file.readAsStringSync()) : null;
+    if (!file.existsSync()) return null;
+    try {
+      return jsonDecode(file.readAsStringSync());
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Where the worktree of [task] lives inside [projectRoot].
@@ -77,7 +83,8 @@ class TaskWorktree {
   /// runs the project's setup commands in it and pushes the branch, so other
   /// threads see the task as busy. When the task
   /// branch is already on the remote and ends with a blocked run's `wip:`
-  /// commit, it continues that branch instead. Throws a [StateError] with a
+  /// commit, it continues that branch instead, with `origin/<baseBranch>`
+  /// merged in. Throws a [StateError] with a
   /// readable message and removes what it created on any error.
   static Future<TaskWorktree> start({
     required RunCommand run,
@@ -123,6 +130,25 @@ class TaskWorktree {
     await _excludeFolder(projectRoot, git);
     await git(['worktree', 'add', '--quiet', '-b', task.branch, worktree.directory, 'FETCH_HEAD']);
     try {
+      if (resume) {
+        // Bring in what the planner changed on the base since the block, so
+        // the stages read the task as it is planned now.
+        await git(['fetch', '--quiet', 'origin', baseBranch], inside: worktree.directory);
+        final merge = await run('git', [
+          'merge',
+          '--quiet',
+          '--no-edit',
+          '-m',
+          'wip: take origin/$baseBranch into ${task.id.toLowerCase()}',
+          'FETCH_HEAD',
+        ], workingDirectory: worktree.directory);
+        if (!merge.ok) {
+          throw StateError(
+            '${task.label}: its blocked branch does not merge with origin/$baseBranch: '
+            '${'${merge.stdout}\n${merge.stderr}'.trim()} Merge it by hand, or delete that remote branch and start again.',
+          );
+        }
+      }
       final taskFile = File('${worktree.directory}/${task.indexPath}');
       if (!taskFile.existsSync()) throw StateError('${task.indexPath} is not on ${task.branch}.');
       Directory(worktree.runnerDirectory).createSync();

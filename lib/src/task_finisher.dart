@@ -89,7 +89,7 @@ class TaskFinisher {
 
     // Check before closing the task, so a problem leaves the worktree as it was.
     final leaks = DiffScanner.scan(
-      '+++ b/${TaskWorktree.runnerFolder}/report.md\n${report.split('\n').map((line) => '+$line').join('\n')}',
+      'diff --git a/report.md b/report.md\n+++ b/${TaskWorktree.runnerFolder}/report.md\n@@\n${report.split('\n').map((line) => '+$line').join('\n')}',
       extra: config.privatePatterns,
     );
     if (leaks.isNotEmpty) {
@@ -99,13 +99,22 @@ class TaskFinisher {
 
     var archived = _closedDirectory();
     if (archived == null) {
-      archived = await TaskArchiver(
-        workspace: worktree.directory,
-        run: run,
-        tasksDir: config.tasksDir,
-      ).archive(task, notes: _notes(report));
-      if (await _publisher.commitAll(subject: closingSubject, trailer: _trailer(Role.implementer)) case final error?) {
-        throw StateError(error);
+      try {
+        archived = await TaskArchiver(
+          workspace: worktree.directory,
+          run: run,
+          tasksDir: config.tasksDir,
+        ).archive(task, notes: _notes(report));
+        if (await _publisher.commitAll(subject: closingSubject, trailer: _trailer(Role.implementer))
+            case final error?) {
+          throw StateError(error);
+        }
+      } catch (_) {
+        // The tree was clean before, so undo the half move and `finish` can
+        // simply run again.
+        await run('git', ['reset', '--quiet', '--hard', 'HEAD'], workingDirectory: worktree.directory);
+        await run('git', ['clean', '-fdq', '--', config.tasksDir], workingDirectory: worktree.directory);
+        rethrow;
       }
     }
     await _guardAndPush();
@@ -172,11 +181,14 @@ class TaskFinisher {
 
   /// Writes [question] under `## Blocked` in the task's `notes.md`, commits
   /// everything as `wip:`, pushes and removes the worktree.
+  /// It can run again after a failure, also after a [finish] that closed the
+  /// task: the question is written once, in the task folder where it is now.
   Future<void> block(String question) async {
-    File('${worktree.directory}/${task.directory}/notes.md').writeAsStringSync(
-      '\n## Blocked\n\n${question.trim()}\n',
-      mode: FileMode.append,
-    );
+    final notes = File('${worktree.directory}/${_closedDirectory() ?? task.directory}/notes.md');
+    final section = '\n## Blocked\n\n${question.trim()}\n';
+    if (!notes.existsSync() || !notes.readAsStringSync().endsWith(section)) {
+      notes.writeAsStringSync(section, mode: FileMode.append);
+    }
     if (await _publisher.commitAll(
           subject: 'wip: ${task.id.toLowerCase()} ${task.slug} stopped',
           trailer: _trailer(Role.implementer),
