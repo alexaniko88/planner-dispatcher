@@ -31,6 +31,10 @@ class DispatcherConfig {
   final List<List<String>> setup;
   final List<List<String>> check;
   final List<String> rules;
+
+  /// The rule packs the project uses, each a `stacks/<name>/` folder of the
+  /// package that install copies into the project.
+  final List<String> stacks;
   final String tasksDir;
   final String? goldensDir;
   final List<String> commitTypes;
@@ -51,6 +55,7 @@ class DispatcherConfig {
     required this.check,
     required this.rules,
     required this.commitTypes,
+    this.stacks = const [],
     this.tasksDir = defaultTasksDir,
     this.goldensDir,
     this.gitEmailSuffix,
@@ -70,6 +75,7 @@ class DispatcherConfig {
     'setup',
     'check',
     'rules',
+    'stacks',
     'tasks_dir',
     'goldens_dir',
     'commit_types',
@@ -83,6 +89,7 @@ class DispatcherConfig {
   static const _removedKeys = {'run_folder', 'allowed_commands'};
 
   static final _commitType = RegExp(r'^[a-z]+$');
+  static final _stackName = RegExp(r'^[a-z0-9]+(-[a-z0-9]+)*$');
   static final _tasksDir = RegExp(r'^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$');
   static const _modelFields = {'model', 'effort', 'name'};
 
@@ -102,6 +109,8 @@ class DispatcherConfig {
       throw ConfigError('(file)', 'invalid YAML: ${error.message}');
     }
     if (root is! Map) throw const ConfigError('(file)', 'must be a map');
+    // Checked first, so install can tell a wrong stacks value from any other problem.
+    final stacks = _stacks(root);
     for (final key in root.keys) {
       if (_removedKeys.contains(key)) throw ConfigError('$key', 'is no longer used; remove it');
       if (!_keys.contains(key)) throw ConfigError('$key', 'unknown key');
@@ -129,6 +138,7 @@ class DispatcherConfig {
       setup: _commands(root, 'setup'),
       check: check,
       rules: _strings(root, 'rules'),
+      stacks: stacks,
       tasksDir: tasksDir,
       goldensDir: root.containsKey('goldens_dir') ? _string(root, 'goldens_dir') : null,
       commitTypes: commitTypes,
@@ -169,6 +179,17 @@ class DispatcherConfig {
       for (final (index, command) in _strings(map, key).indexed)
         if (command.trim().isEmpty) throw ConfigError('$key[$index]', 'must not be empty') else splitCommand(command),
     ];
+  }
+
+  static List<String> _stacks(Map<dynamic, dynamic> root) {
+    if (!root.containsKey('stacks')) return const [];
+    final stacks = _strings(root, 'stacks');
+    for (final (index, name) in stacks.indexed) {
+      final path = 'stacks[$index]';
+      if (!_stackName.hasMatch(name)) throw ConfigError(path, 'must match ${_stackName.pattern}');
+      if (stacks.indexOf(name) < index) throw ConfigError(path, 'is listed twice');
+    }
+    return stacks;
   }
 
   static Publish _publish(Map<dynamic, dynamic> root) {

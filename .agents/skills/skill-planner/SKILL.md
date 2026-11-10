@@ -16,7 +16,7 @@ effort: medium
 
 Turn the user's idea into simple tasks that a runner can implement without asking anyone. Every question left open in a task becomes a blocked run later, and every extra line costs the runner time, so tasks are complete and short.
 
-Project facts come only from these files: `planner_dispatcher.yaml` (the commands and settings), the files in its `rules` list, `.agents/planner-dispatcher/planner-notes.md` (branches, pull requests, UI sources, project skills, checks and coverage checks), and, for what runners may do, the Common and Tests sections of `.agents/skills/skill-dispatcher/references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. Read them before you plan. `<dart>` below is the config's `dart` value and `<tasks_dir>` is its `tasks_dir` value (default `docs/backlog`).
+Project facts come only from these files: `planner_dispatcher.yaml` (the commands and settings), the files in its `rules` list, `.agents/planner-dispatcher/planner-notes.md` (branches, pull requests, UI sources, project skills, checks and coverage checks), and, for what runners may do, the Common and Tests sections of `.agents/skills/skill-dispatcher/references/runner-rules.md`, then the Common, Tests and Planning sections of `.agents/rules/stacks/<name>/rules.md` for each name in the config's `stacks` list (skip this when the list is missing or empty), then the Common and Tests sections of `.agents/planner-dispatcher/project-overrides.md`. Read them before you plan. `<dart>` below is the config's `dart` value and `<tasks_dir>` is its `tasks_dir` value (default `docs/backlog`).
 
 The layout, ids, task fields and sections, the acceptance format, `touches`, the ready checklist and the planning record's lifecycle are in `.agents/rules/backlog-format.md`. Follow that file and do not copy it into tasks. How to split the work and what a runner can do are in [references/task-splitting.md](references/task-splitting.md). Running the tasks is `skill-dispatcher`'s job, not yours.
 
@@ -72,7 +72,7 @@ When the first line of the planner notes' `## UI sources` is `No UI`, skip steps
 
 ## 5. Mockup (tasks with a view)
 
-Build a mockup only for a new screen, a new sheet or dialog, or a new layout of an existing screen. A smaller change to an existing screen (a field, a text, a state) needs no mockup: its view spec and the current goldens or screens are enough. When a mockup is needed, read [references/mockup.md](references/mockup.md), build it and revise it until the user approves it. A state-only task has no view and needs no mockup.
+Build a mockup only for a new screen, a new sheet or dialog, or a new layout of an existing screen. A smaller change to an existing screen (a field, a text, a state) needs no mockup: its view spec and the current snapshot images or screens are enough. When a mockup is needed, read [references/mockup.md](references/mockup.md), build it and revise it until the user approves it. A state-only task has no view and needs no mockup.
 
 ## 6. Split into tasks
 

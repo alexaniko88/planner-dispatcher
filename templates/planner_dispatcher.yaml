@@ -20,6 +20,10 @@ check:
 rules:
   - CLAUDE.md
 
+# Rule packs of the library that every role and the planner read, for example flutter.
+# The project files still win where they differ.
+# stacks: [flutter]
+
 # Where the planner writes the epics, stories and tasks, relative to the project root.
 # tasks_dir: docs/backlog
 

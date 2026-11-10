@@ -14,11 +14,12 @@ Read the shared files once, then each task.
 
 - `planner_dispatcher.yaml` and every file in its `rules` list.
 - The sections "Task `index.md`" and "When a task is `ready`" of `.agents/rules/backlog-format.md`.
+- For each name in the config's `stacks` list, the sections Common, Tests and Planning of `.agents/rules/stacks/<name>/rules.md`. Skip this when the list is missing or empty.
 - The sections Common and Tests of `.agents/planner-dispatcher/project-overrides.md`, and `## Checks` of `.agents/planner-dispatcher/planner-notes.md`.
 - The story and epic indexes named in your brief, or the parent category index of a standalone task.
 - Each task `index.md` named in your brief, all of it, and its linked mockup when visual.
 - Each task's upstream task contracts (the tasks in its `depends-on`). Planned contracts may precede the code; report missing decisions, not the absence of code a dependency plans to write.
-- Every file, folder and golden image a task names, and the code around what it changes.
+- Every file, folder and snapshot image a task names, and the code around what it changes.
 
 Judge each task alone, only from its own file, its parents and its upstream contracts. A detail that is written only in a sibling task is missing from the task that needs it. How the tasks fit together is the planner's check, not yours.
 
@@ -33,8 +34,8 @@ Judge each task alone, only from its own file, its parents and its upstream cont
 - **Contradictions.** Between the task and the code, the rules, its parents or another task, or between the view spec and the mockup.
 - **Strings.** User-facing text missing in a language the project rules require (English only when they name none).
 - **Contract mismatches.** Inputs, outputs, errors or symbols that disagree with the upstream contracts or the parent's shared agreements, or planned new symbols presented as existing code.
-- **Unrunnable validation.** A required app/device launch, integration test, unplanned script or missing harness/fake that would block the tests stage. A golden with no golden update command in the planner notes or overrides.
-- **Not simple enough.** A task with more than one responsibility, one a runner could not finish in one short run, or one that needs a script, Python, a new tool or a command outside the config's `check` list.
+- **Unrunnable validation.** A required app/device launch, integration test, unplanned script or missing harness/fake that would block the tests stage. A snapshot image with no snapshot update command in the planner notes or overrides.
+- **Not simple enough.** A task with more than one responsibility, one a runner could not finish in one short run, or one that needs a script, Python, a new tool or a command outside the config's `check` list and the per-file and generator commands the project overrides name.
 - **Coverage gaps.** A requirement the story assigns to this task with no criterion that checks it.
 
 Only report what you would really have to guess. If you would follow an existing pattern in the code, it is not a question. Do not invent doubts to look thorough.

@@ -12,10 +12,11 @@ You implement one task of this repository and stop. The dispatcher's coordinator
 
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Implementation".
+- For each name in the `stacks` list of `planner_dispatcher.yaml`, `.agents/rules/stacks/<name>/rules.md`, sections "Common" and "Implementation". Skip this when the list is missing or empty.
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Implementation".
 - The task `index.md` named in your brief, all of it, then its story and epic indexes and the agreements they link.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).
-- For a visual task: the View spec, the linked approved mockup (possibly in its parent) and the relevant existing goldens.
+- For a visual task: the View spec, the linked approved mockup (possibly in its parent) and the relevant existing snapshot images.
 
 ## Do
 

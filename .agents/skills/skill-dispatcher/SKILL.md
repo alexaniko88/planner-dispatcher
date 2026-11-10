@@ -82,5 +82,5 @@ The task is <path>. The base branch is origin/<base_branch>.
 - One task per thread. Several threads can run at once, each on its own task: `start` claims the task, so `check` shows it as busy elsewhere.
 - Never edit a task, its status or its indexes, and never edit the work of a stage yourself. Do not run the stages yourself, even when a subagent fails: start it again once, then ask the user (step 9).
 - Never run `git commit`, `git push`, `git checkout` or `gh pr` yourself: use the dispatcher commands.
-- The roles and their limits are in `.agents/skills/skill-dispatcher/roles/`, `references/runner-rules.md` and `.agents/planner-dispatcher/project-overrides.md`. You do not need to read them: the subagents do.
+- The roles and their limits are in `.agents/skills/skill-dispatcher/roles/`, `references/runner-rules.md`, the stack rules in `.agents/rules/stacks/` and `.agents/planner-dispatcher/project-overrides.md`. You do not need to read them: the subagents do.
 - The suggested models come only from the `models` command; a project changes them under `models` in `planner_dispatcher.yaml`.

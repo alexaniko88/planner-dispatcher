@@ -95,7 +95,7 @@ Epic: [<Capability>](../../../index.md)
 
 ## Context
 
-- <Verified code entry points and goldens that matter, and where new code goes under the project rules.>
+- <Verified code entry points and snapshot images that matter, and where new code goes under the project rules.>
 
 ## Contract
 
@@ -116,7 +116,7 @@ Epic: [<Capability>](../../../index.md)
 ## Files and tests
 
 - New: <each file this task creates; changed files are in `touches`.>
-- Tests: <each test file, with its kind (unit, golden, widget).>
+- Tests: <each test file, with its kind (unit, snapshot, component).>
 - <Any planned fake or harness edit.>
 
 ## Acceptance
@@ -125,7 +125,7 @@ Epic: [<Capability>](../../../index.md)
 - [ ] Given <state, only when not obvious>, when <situation>, then <result>. Check: <allowed check>.
 ```
 
-For a visual widget or assembly task, add `## View spec` and `## Mockup` after `## Contract` (or after `## Context` when there is no contract). Link the parent's approved mockup when shared. Pure logic and state-only tasks omit both.
+For a visual component or assembly task, add `## View spec` and `## Mockup` after `## Contract` (or after `## Context` when there is no contract). Link the parent's approved mockup when shared. Pure logic and state-only tasks omit both.
 
 ## Standalone bug or improvement task
 

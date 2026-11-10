@@ -12,6 +12,7 @@ You review the work of one task and stop. Never edit any file, never run `git ad
 
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Review checks".
+- For each name in the `stacks` list of `planner_dispatcher.yaml`, `.agents/rules/stacks/<name>/rules.md`, sections "Common" and "Review checks". Skip this when the list is missing or empty.
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Review checks".
 - The task `index.md` named in your brief, and the shared contracts it links.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).
@@ -43,7 +44,7 @@ Reviewed. The change matches the task; one gap below.
   "findings": [
     {
       "severity": "general",
-      "file": "lib/src/store.dart",
+      "file": "src/store.ts",
       "line": 42,
       "summary": "The missing-file case has no test.",
       "fix": "Add a test that loads a store from a path that does not exist."

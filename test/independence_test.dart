@@ -24,7 +24,7 @@ List<String> _matches(List<File> files, RegExp pattern) {
 
 void main() {
   test('shipped files never name another project or a local home path', () {
-    final shipped = _files(['lib', 'bin', '.agents', 'templates'], files: ['README.md']);
+    final shipped = _files(['lib', 'bin', '.agents', 'templates', 'stacks'], files: ['README.md']);
     // Built from parts so this test does not describe a private path itself.
     final forbidden = RegExp(
       r'\bsport|agent_check|/Us'
@@ -36,7 +36,8 @@ void main() {
   });
 
   test('the engine hard-codes no project command, golden folder or base branch', () {
-    final engine = _files(['lib', 'bin']);
+    // lib/analysis/ holds the lint sets of the stacks, which name their stack.
+    final engine = _files(['lib', 'bin']).where((file) => !file.path.startsWith('lib/analysis/')).toList();
     final forbidden = RegExp(r'fvm|flutter|test/snapshots|origin/master', caseSensitive: false);
 
     expect(_matches(engine, forbidden), isEmpty);

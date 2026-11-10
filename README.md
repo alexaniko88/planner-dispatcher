@@ -5,6 +5,7 @@ A planner and a dispatcher for AI coding tools, for Flutter and Dart projects.
 - The **planner** turns an idea into small, concrete tasks under `docs/backlog/` (set by `tasks_dir`) that a runner can implement without asking anything.
 - The **dispatcher** runs one ready task in the thread or CLI you open it in: an agent coordinates, and a subagent per stage (implementer, tests, reviewer) does the work in the task's own worktree, ending as one pull request. It suggests a model for each stage for Claude, Codex and Antigravity; you accept it or type others, and you type them for any other tool.
 - The **dispatcher check** shows which tasks can start now, how complex each one is (1 to 10) and which ones overlap, so you can open one thread or CLI per task.
+- **Stack rules** give every role and the planner the best practices of the project's language, so a project writes down only its own choices. The library ships a Flutter pack.
 
 ## Requirements
 
@@ -27,13 +28,29 @@ A planner and a dispatcher for AI coding tools, for Flutter and Dart projects.
 
 2. Run `<dart> pub get`, where `<dart>` is your Dart command (`dart` or `fvm dart`).
 3. Run `<dart> run planner_dispatcher:install` from the project root.
-4. Fill `planner_dispatcher.yaml` and the two project files `.agents/planner-dispatcher/project-overrides.md` and `.agents/planner-dispatcher/planner-notes.md`.
+4. Fill `planner_dispatcher.yaml` (set `stacks: [flutter]` for a Flutter project) and the two project files `.agents/planner-dispatcher/project-overrides.md` and `.agents/planner-dispatcher/planner-notes.md`.
 5. Run install again, so the Claude Code permissions match your `dart` and `check` commands.
 6. Commit the result.
 
-Install copies the library-owned files (`.agents/skills/skill-dispatcher/`, `.agents/skills/skill-dispatcher-check/`, `.agents/skills/skill-planner/`, `.agents/rules/backlog-format.md` and the three `.claude/skills/` links) and creates the three project files only when they are missing. It never overwrites a project file.
+Install copies the library-owned files (`.agents/skills/skill-dispatcher/`, `.agents/skills/skill-dispatcher-check/`, `.agents/skills/skill-planner/`, `.agents/rules/backlog-format.md`, the rules of each configured stack in `.agents/rules/stacks/<name>/` and the three `.claude/skills/` links) and creates the three project files only when they are missing. It never overwrites a project file. It removes the rules of a stack the config no longer lists, and refuses a stack the package does not have, before it changes anything.
 
-Install also adds to `.claude/settings.json` the permission rules a task run needs, so a run is not stopped by a permission dialog: `Bash(<dart> run planner_dispatcher:*)`, each `check` command and the read-only git commands (`git status`, `git diff`, `git log`, `git show`). It only adds missing rules and keeps the rest of the file; when the config or the file cannot be read, it changes nothing and prints why. Add your per-file format, analyze and test commands there if the `check` commands do not cover them. Codex and Antigravity have their own permission settings: allow the same commands there.
+Install also adds to `.claude/settings.json` the permission rules a task run needs, so a run is not stopped by a permission dialog: `Bash(<dart> run planner_dispatcher:*)`, each `check` command and the read-only git commands (`git status`, `git diff`, `git log`, `git show`). It only adds missing rules and keeps the rest of the file; when the config or the file cannot be read, it changes nothing and prints why. Add your per-file format, analyze and test commands and the code generator commands of `project-overrides.md` there if the `check` commands do not cover them. Codex and Antigravity have their own permission settings: allow the same commands there.
+
+## Stacks
+
+A stack is a rule pack of the library for one language, in `stacks/<name>/rules.md`. It has the same sections as the runner rules (Common, Implementation, Tests, Review checks) plus Planning for the planner. Each role reads, in this order: the generic runner rules, the rules of each stack in `stacks`, then `.agents/planner-dispatcher/project-overrides.md`. The project file wins where they differ.
+
+A stack holds only rules that are true for any project of that language. The choices of a project (state management, localization, test doubles, snapshot tooling, layers, shared UI pieces, code style beyond the analyzer) stay in `project-overrides.md`; its starter has a line for each. A stack can also ship `suggested-overrides.md`, optional style lines to copy into the overrides; no role reads it.
+
+Install owns the folders of the stacks the package ships. A folder under `.agents/rules/stacks/` with another name is left alone, but no role reads it: put project rules in `project-overrides.md`.
+
+- `flutter`: Dart style (null safety, pattern matching, exhaustive switches, early returns), widgets and lifecycle, async and `BuildContext`, state updates, rebuild cost, theme values, strings, accessibility, tests and review checks. Its `suggested-overrides.md` has the optional style lines (class layout, named parameters, typedefs, extensions and more). It leaves layout and lints to `dart format` and `analysis_options.yaml`. The lints it relies on are in `package:planner_dispatcher/analysis/flutter.yaml`; add them next to your own lint set (a list of includes needs Dart 3.8 or newer):
+
+  ```yaml
+  include:
+    - package:flutter_lints/flutter.yaml
+    - package:planner_dispatcher/analysis/flutter.yaml
+  ```
 
 ## How to work
 
@@ -50,6 +67,7 @@ Install also adds to `.claude/settings.json` the permission rules a task run nee
 - `setup`: required, may be empty. Commands run in order in a new task worktree; a failure stops the start and removes the worktree.
 - `check`: required, at least one. Commands run in order after implementation; all must exit 0.
 - `rules`: required, may be empty. Project files every role and the planner read first.
+- `stacks`: optional, default none. The rule packs of the library the project uses, for example `[flutter]`. Each one is a `stacks/<name>/` folder of the package. Every role and the planner read it after the generic runner rules and before the project files, which win where they differ.
 - `tasks_dir`: optional, default `docs/backlog`. The backlog folder, relative to the project root: the planner writes the epics, stories and tasks there and the dispatcher reads them from it. A project that already uses `project-tasks/` sets `tasks_dir: project-tasks`.
 - `goldens_dir`: optional, default unset. Changed `.png` files there get before/after images in the pull request.
 - `commit_types`: required. The commit types allowed in commit subjects.

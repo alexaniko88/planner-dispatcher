@@ -25,6 +25,7 @@ check:
   - fvm flutter test
 rules:
   - CLAUDE.md
+stacks: [flutter, kotlin-native]
 tasks_dir: planning/tasks
 goldens_dir: test/goldens
 commit_types: [feat, fix, docs]
@@ -77,6 +78,7 @@ void main() {
       ['fvm', 'flutter', 'test'],
     ]);
     expect(config.rules, ['CLAUDE.md']);
+    expect(config.stacks, ['flutter', 'kotlin-native']);
     expect(config.tasksDir, 'planning/tasks');
     expect(config.goldensDir, 'test/goldens');
     expect(config.commitTypes, ['feat', 'fix', 'docs']);
@@ -95,6 +97,7 @@ void main() {
 
     expect(config.setup, isEmpty);
     expect(config.rules, isEmpty);
+    expect(config.stacks, isEmpty);
     expect(config.tasksDir, 'docs/backlog');
     expect(config.goldensDir, isNull);
     expect(config.gitEmailSuffix, isNull);
@@ -206,6 +209,34 @@ void main() {
         reason: value,
       );
     }
+  });
+
+  test('stacks is a list of distinct lowercase names', () {
+    expect(
+      () => DispatcherConfig.parse(_with('stacks', 'stacks: flutter')),
+      throwsA(_error('stacks', 'must be a list')),
+    );
+    expect(
+      () => DispatcherConfig.parse(_with('stacks', 'stacks: [flutter, 3]')),
+      throwsA(_error('stacks[1]', 'must be a string')),
+    );
+    for (final value in ['Flutter', 'my stack', '../flutter', 'flutter-', '"-a"', '""']) {
+      expect(
+        () => DispatcherConfig.parse(_with('stacks', 'stacks: [$value]')),
+        throwsA(_error('stacks[0]', r'must match ^[a-z0-9]+(-[a-z0-9]+)*$')),
+        reason: value,
+      );
+    }
+    expect(
+      () => DispatcherConfig.parse(_with('stacks', 'stacks: [flutter, flutter]')),
+      throwsA(_error('stacks[1]', 'is listed twice')),
+    );
+    expect(DispatcherConfig.parse(_with('stacks', 'stacks: []')).stacks, isEmpty);
+    expect(
+      () => DispatcherConfig.parse('${_with('stacks', 'stacks: [Nope]')}bogus: 1\n'),
+      throwsA(_error('stacks[0]', r'must match ^[a-z0-9]+(-[a-z0-9]+)*$')),
+      reason: 'a stacks problem is reported before any other',
+    );
   });
 
   test('publish is auto or ask', () {

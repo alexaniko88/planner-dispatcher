@@ -30,7 +30,7 @@ One table of the ready tasks, in the order of `ready`:
 ```markdown
 | Task | Type | Complexity | Touches | Overlaps with |
 | --- | --- | --- | --- | --- |
-| Save template (TPL-03-02) | feat | 4/10 | `lib/src/store.dart` +2 | — |
+| Save template (TPL-03-02) | feat | 4/10 | `src/store.ts` +2 | — |
 ```
 
 - Name every task by its `label`, never by the id alone.

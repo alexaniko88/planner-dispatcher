@@ -17,18 +17,24 @@ class InstallError implements Exception {
 /// What an install did. Paths are project-relative, `/`-separated, with no trailing slash.
 class InstallReport {
   final List<String> written;
+  final List<String> removed;
   final List<String> created;
   final List<String> kept;
   final List<String> starterChanged;
+
+  /// One line when the installed stacks were left as they are, with the reason.
+  final String stacksKept;
 
   /// One line about the Claude Code permissions: what was added, or why not.
   final String permissions;
 
   const InstallReport({
     required this.written,
+    this.removed = const [],
     required this.created,
     required this.kept,
     required this.starterChanged,
+    this.stacksKept = '',
     this.permissions = '',
   });
 
@@ -39,9 +45,11 @@ class InstallReport {
     ];
     return [
       ...group('wrote ', written),
+      ...group('removed ', removed),
       ...group('created ', created),
       ...group('kept ', kept),
       ...group('starter changed: ', starterChanged),
+      if (stacksKept.isNotEmpty) stacksKept,
       if (permissions.isNotEmpty) permissions,
     ];
   }
@@ -62,6 +70,12 @@ class Installer {
   static const _tempSuffix = '.install-tmp';
   static const _startersFolder = '.agents/planner-dispatcher/.starters';
 
+  /// Where the rule packs of the configured stacks go in the project.
+  static const _stacksFolder = '.agents/rules/stacks';
+
+  /// The one file every `stacks/<name>/` folder of the package must have.
+  static const _stackRules = 'rules.md';
+
   /// Template file name -> the project-owned file made from it.
   static const _starters = {
     'planner_dispatcher.yaml': 'planner_dispatcher.yaml',
@@ -75,23 +89,31 @@ class Installer {
     '.agents',
     '.agents/skills',
     '.agents/rules',
+    _stacksFolder,
     '.agents/planner-dispatcher',
   ];
 
   static List<String> get _libraryFolders => [for (final name in _skills) '.agents/skills/$name'];
 
   InstallReport install() {
-    _validate();
-    final libraryPaths = [..._libraryFolders, _formatRule];
-    for (final path in libraryPaths) {
+    final (:stacks, :keptReason) = _configuredStacks();
+    _validate(stacks ?? const []);
+    final stackPaths = [for (final name in stacks ?? const <String>[]) '$_stacksFolder/$name'];
+    for (final path in [..._libraryFolders, _formatRule]) {
       _delete('${_project(path)}$_tempSuffix');
     }
+    _deleteStackTemps();
 
     final written = <String>[];
     for (final path in _libraryFolders) {
       _replaceFolder(_package(path), _project(path));
       written.add(path);
     }
+    for (final path in stackPaths) {
+      _replaceFolder(_package(path.substring('.agents/rules/'.length)), _project(path));
+      written.add(path);
+    }
+    final removed = stacks == null ? const <String>[] : _removeOtherStacks(stackPaths);
     _replaceFile(_package(_formatRule), _project(_formatRule));
     written.add(_formatRule);
     _delete(_project(_oldFormatRule));
@@ -124,11 +146,67 @@ class Installer {
 
     return InstallReport(
       written: written,
+      removed: removed,
       created: created,
       kept: kept,
       starterChanged: starterChanged,
+      stacksKept: keptReason == null ? '' : 'stacks kept as installed: $keptReason',
       permissions: _addPermissions(),
     );
+  }
+
+  /// The stacks of the project's config. [stacks] is null when the installed
+  /// stacks must stay as they are: when there is no config yet (then nothing
+  /// says which stacks the project wants), or when it cannot be read, with
+  /// [keptReason] saying why. A wrong `stacks` value stops the install.
+  ({List<String>? stacks, String? keptReason}) _configuredStacks() {
+    final path = _project(DispatcherConfig.fileName);
+    if (!File(path).existsSync()) return (stacks: null, keptReason: null);
+    try {
+      return (stacks: DispatcherConfig.load(path: path).stacks, keptReason: null);
+    } on ConfigError catch (error) {
+      if (error.key == 'stacks' || error.key.startsWith('stacks[')) throw InstallError('$error');
+      return (stacks: null, keptReason: '$error');
+    }
+  }
+
+  /// Deletes the leftovers of an install that stopped while it copied a stack.
+  void _deleteStackTemps() {
+    final folder = Directory(_project(_stacksFolder));
+    if (!folder.existsSync()) return;
+    for (final entity in folder.listSync(followLinks: false)) {
+      if (entity.path.endsWith(_tempSuffix)) _delete(entity.path);
+    }
+  }
+
+  /// Deletes the installed folders of the stacks the package ships and the
+  /// config no longer names. A folder the package does not ship belongs to
+  /// the project and stays.
+  List<String> _removeOtherStacks(List<String> kept) {
+    final folder = Directory(_project(_stacksFolder));
+    if (!folder.existsSync()) return const [];
+    final shipped = _shippedStacks();
+    final removed = <String>[];
+    for (final entity in folder.listSync(followLinks: false)) {
+      final name = entity.path.split('/').last;
+      final path = '$_stacksFolder/$name';
+      if (entity is File || kept.contains(path) || !shipped.contains(name)) continue;
+      _delete(entity.path);
+      removed.add(path);
+    }
+    if (folder.listSync().isEmpty) folder.deleteSync();
+    return removed;
+  }
+
+  /// The names of the stacks the package ships, exactly as the folders are
+  /// spelled, so a case-insensitive disk does not match another spelling.
+  Set<String> _shippedStacks() {
+    final folder = Directory(_package('stacks'));
+    if (!folder.existsSync()) return const {};
+    return {
+      for (final entity in folder.listSync(followLinks: false))
+        if (entity is Directory && File('${entity.path}/$_stackRules').existsSync()) entity.path.split('/').last,
+    };
   }
 
   static const _settings = '.claude/settings.json';
@@ -158,7 +236,7 @@ class Installer {
     }
   }
 
-  void _validate() {
+  void _validate(List<String> stacks) {
     if (Directory(projectRoot).resolveSymbolicLinksSync() == Directory(packageRoot).resolveSymbolicLinksSync()) {
       throw const InstallError('Refusing to install into the package itself.');
     }
@@ -182,7 +260,12 @@ class Installer {
         throw InstallError('package is incomplete: $path');
       }
     }
-    for (final path in _libraryFolders) {
+    for (final name in stacks) {
+      if (!File(_package('stacks/$name/$_stackRules')).existsSync()) {
+        throw InstallError('unknown stack $name: the package has no stacks/$name/$_stackRules');
+      }
+    }
+    for (final path in [..._libraryFolders, for (final name in stacks) 'stacks/$name']) {
       for (final entity in Directory(_package(path)).listSync(recursive: true, followLinks: false)) {
         if (entity is Link) throw InstallError('shipped files must not contain links: ${_relative(entity.path)}');
       }

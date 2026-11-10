@@ -12,6 +12,7 @@ You write the tests for what the implementer just changed, then stop. The dispat
 
 - Every file in the `rules` list of `planner_dispatcher.yaml`.
 - `.agents/skills/skill-dispatcher/references/runner-rules.md`, sections "Common" and "Tests".
+- For each name in the `stacks` list of `planner_dispatcher.yaml`, `.agents/rules/stacks/<name>/rules.md`, sections "Common" and "Tests". Skip this when the list is missing or empty.
 - `.agents/planner-dispatcher/project-overrides.md`, sections "Common" and "Tests".
 - The task `index.md` named in your brief, especially `## Acceptance` and `## Files and tests`, then its story and epic indexes.
 - Every skill listed in the task's `skills:` front matter (`.agents/skills/<name>/SKILL.md`).

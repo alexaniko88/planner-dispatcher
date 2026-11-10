@@ -1,0 +1,23 @@
+# Lints that back the Flutter stack rules (stacks/flutter/rules.md): const
+# widgets, print, empty catch, unclosed subscriptions and sinks, unawaited
+# futures, BuildContext after await and exhaustive switches.
+# Add them next to the project's own lint set (a list of includes needs
+# Dart 3.8 or newer):
+#
+#   include:
+#     - package:flutter_lints/flutter.yaml
+#     - package:planner_dispatcher/analysis/flutter.yaml
+linter:
+  rules:
+    - avoid_print
+    - cancel_subscriptions
+    - close_sinks
+    - empty_catches
+    - exhaustive_cases
+    - no_default_cases
+    - prefer_const_constructors
+    - prefer_const_constructors_in_immutables
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+    - unawaited_futures
+    - use_build_context_synchronously

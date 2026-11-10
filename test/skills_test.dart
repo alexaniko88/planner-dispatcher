@@ -22,6 +22,7 @@ const _headings = ['## Common', '## Implementation', '## Tests', '## Review chec
 const _readOrder = [
   'planner_dispatcher.yaml',
   'runner-rules.md',
+  '.agents/rules/stacks/<name>/rules.md',
   '.agents/planner-dispatcher/project-overrides.md',
 ];
 
@@ -112,6 +113,34 @@ void main() {
         '.agents/planner-dispatcher/project-overrides.md',
       ]) {
         expect(_headingsOf(File(path).readAsStringSync()), _headings, reason: path);
+      }
+    });
+
+    test('every stack pack has the four runner sections and Planning, and names no project command', () {
+      final packs = Directory('stacks').listSync().whereType<Directory>().toList();
+
+      expect(packs, isNotEmpty);
+      for (final pack in packs) {
+        final rules = File('${pack.path}/rules.md');
+        expect(rules.existsSync(), isTrue, reason: '${pack.path} has no rules.md');
+        final text = rules.readAsStringSync();
+        expect(_headingsOf(text), [..._headings, '## Planning'], reason: rules.path);
+        expect(_projectCommand.hasMatch(text), isFalse, reason: rules.path);
+      }
+    });
+
+    test('no shipped skill file or the format rule uses the words of one stack', () {
+      // These words belong in stacks/<name>/rules.md; `goldens_dir` is a config key.
+      final stackWords = RegExp(
+        r'widget|golden(?!s_dir)|view ?model|flutter|\bfvm\b|pubspec|\.dart\b',
+        caseSensitive: false,
+      );
+      final files = [..._files('.agents/skills', recursive: true), _formatRule];
+
+      for (final file in files) {
+        for (final (index, line) in File(file).readAsLinesSync().indexed) {
+          expect(stackWords.hasMatch(line), isFalse, reason: '$file:${index + 1}: $line');
+        }
       }
     });
 

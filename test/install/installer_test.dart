@@ -139,20 +139,27 @@ void main() {
   test('lines come in the agreed order, each group sorted', () {
     const report = InstallReport(
       written: ['b', 'a'],
+      removed: ['j', 'i'],
       created: ['d', 'c'],
       kept: ['f', 'e'],
       starterChanged: ['h', 'g'],
+      stacksKept: 'stacks kept as installed: x',
+      permissions: 'permissions kept y',
     );
 
     expect(report.lines(), [
       'wrote a',
       'wrote b',
+      'removed i',
+      'removed j',
       'created c',
       'created d',
       'kept e',
       'kept f',
       'starter changed: g',
       'starter changed: h',
+      'stacks kept as installed: x',
+      'permissions kept y',
     ]);
   });
 
@@ -278,6 +285,163 @@ void main() {
       File('$project/.claude/settings.json').writeAsStringSync('{broken');
       expect(installer().install().permissions, startsWith('permissions skipped: .claude/settings.json:'));
       expect(File('$project/.claude/settings.json').readAsStringSync(), '{broken');
+    });
+  });
+
+  group('stacks', () {
+    /// A copied package with a `stacks/<name>/` folder for each of [names].
+    String packageWithStacks(List<String> names) {
+      final package = copyPackage();
+      for (final name in names) {
+        File('$package/stacks/$name/rules.md')
+          ..createSync(recursive: true)
+          ..writeAsStringSync('# $name rules\n');
+        File('$package/stacks/$name/extra/notes.md')
+          ..createSync(recursive: true)
+          ..writeAsStringSync('$name notes\n');
+      }
+      return package;
+    }
+
+    /// Writes the starter config with a `stacks` line.
+    void configure(String stacksLine) {
+      final starter = File('$_repoRoot/templates/planner_dispatcher.yaml').readAsStringSync();
+      File('$project/planner_dispatcher.yaml').writeAsStringSync('$starter$stacksLine\n');
+    }
+
+    test('a configured stack is copied byte for byte and reported', () {
+      final package = packageWithStacks(['demo', 'other']);
+      configure('stacks: [demo]');
+
+      final report = installer(package: package).install();
+
+      expect(report.written, contains('.agents/rules/stacks/demo'));
+      expect(File('$project/.agents/rules/stacks/demo/rules.md').readAsStringSync(), '# demo rules\n');
+      expect(File('$project/.agents/rules/stacks/demo/extra/notes.md').readAsStringSync(), 'demo notes\n');
+      expect(Directory('$project/.agents/rules/stacks/other').existsSync(), isFalse);
+    });
+
+    test('a stack the config no longer names is removed and reported', () {
+      final package = packageWithStacks(['demo', 'other']);
+      configure('stacks: [demo, other]');
+      installer(package: package).install();
+
+      configure('stacks: [other]');
+      final report = installer(package: package).install();
+
+      expect(report.removed, ['.agents/rules/stacks/demo']);
+      expect(Directory('$project/.agents/rules/stacks/demo').existsSync(), isFalse);
+      expect(Directory('$project/.agents/rules/stacks/other').existsSync(), isTrue);
+
+      configure('stacks: []');
+      expect(installer(package: package).install().removed, ['.agents/rules/stacks/other']);
+      expect(Directory('$project/.agents/rules/stacks').existsSync(), isFalse);
+    });
+
+    test('an unknown stack raises InstallError and changes nothing', () {
+      final package = packageWithStacks(['demo']);
+      configure('stacks: [missing]');
+
+      expect(
+        () => installer(package: package).install(),
+        throwsA(
+          isA<InstallError>().having(
+            (e) => e.message,
+            'message',
+            'unknown stack missing: the package has no stacks/missing/rules.md',
+          ),
+        ),
+      );
+      expect(Directory('$project/.agents').existsSync(), isFalse);
+    });
+
+    test('a broken config keeps the installed stacks and says why', () {
+      final package = packageWithStacks(['demo']);
+      configure('stacks: [demo]');
+      installer(package: package).install();
+
+      File('$project/planner_dispatcher.yaml').writeAsStringSync('dart: [broken\n');
+      final report = installer(package: package).install();
+
+      expect(report.removed, isEmpty);
+      expect(report.written, isNot(contains('.agents/rules/stacks/demo')));
+      expect(report.stacksKept, startsWith('stacks kept as installed: planner_dispatcher.yaml: (file)'));
+      expect(File('$project/.agents/rules/stacks/demo/rules.md').existsSync(), isTrue);
+    });
+
+    test('a deleted config keeps the installed stacks', () {
+      final package = packageWithStacks(['demo']);
+      configure('stacks: [demo]');
+      installer(package: package).install();
+
+      File('$project/planner_dispatcher.yaml').deleteSync();
+      final report = installer(package: package).install();
+
+      expect(report.removed, isEmpty);
+      expect(report.stacksKept, isEmpty);
+      expect(report.created, contains('planner_dispatcher.yaml'));
+      expect(File('$project/.agents/rules/stacks/demo/rules.md').existsSync(), isTrue);
+    });
+
+    test('a malformed stacks value raises InstallError and changes nothing', () {
+      final package = packageWithStacks(['demo']);
+      configure('stacks: [Demo]');
+
+      expect(
+        () => installer(package: package).install(),
+        throwsA(
+          isA<InstallError>().having(
+            (e) => e.message,
+            'message',
+            r'planner_dispatcher.yaml: stacks[0]: must match ^[a-z0-9]+(-[a-z0-9]+)*$',
+          ),
+        ),
+      );
+      expect(Directory('$project/.agents').existsSync(), isFalse);
+    });
+
+    test('a folder the package does not ship stays, and a stopped copy is cleaned up', () {
+      final package = packageWithStacks(['demo']);
+      File('$project/.agents/rules/stacks/mine/rules.md')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('# mine\n');
+      Directory('$project/.agents/rules/stacks/demo.install-tmp').createSync(recursive: true);
+      configure('stacks: []');
+
+      final report = installer(package: package).install();
+
+      expect(report.removed, isEmpty);
+      expect(File('$project/.agents/rules/stacks/mine/rules.md').existsSync(), isTrue);
+      expect(Directory('$project/.agents/rules/stacks/demo.install-tmp').existsSync(), isFalse);
+    });
+
+    test('a project folder spelled like a shipped stack in another case stays', () {
+      final package = packageWithStacks(['demo']);
+      File('$project/.agents/rules/stacks/Demo/own.md')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('own\n');
+      configure('stacks: []');
+
+      expect(installer(package: package).install().removed, isEmpty);
+      expect(File('$project/.agents/rules/stacks/Demo/own.md').existsSync(), isTrue);
+      expect(Directory('$project/.agents/rules/stacks/demo.install-tmp').existsSync(), isFalse);
+    });
+
+    test('a stack folder with a link raises InstallError', () {
+      final package = packageWithStacks(['demo']);
+      Link('$package/stacks/demo/link.md').createSync('rules.md');
+      configure('stacks: [demo]');
+
+      expect(
+        () => installer(package: package).install(),
+        throwsA(
+          isA<InstallError>().having(
+            (e) => e.message,
+            'message',
+            'shipped files must not contain links: stacks/demo/link.md',
+          ),
+        ),
+      );
     });
   });
 

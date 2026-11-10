@@ -76,8 +76,8 @@ type: feat             # feat | fix | improve; sets the branch prefix
 complexity: 4          # 1 (simplest) to 10 (hardest); see below
 depends-on: [TPL-03-01]
 touches:               # paths or globs the task changes
-  - lib/src/store.dart
-  - test/goldens/home.png
+  - src/store.ts
+  - test/snapshots/home.png
 skills: []             # optional; project skills the roles read, e.g. [skill-charts]
 ---
 ```
@@ -87,19 +87,19 @@ skills: []             # optional; project skills the roles read, e.g. [skill-ch
 After the front matter, the title and the story and epic link lines, these sections, in this order. Leave out a section marked "only when" that does not apply. Keep the task short and concrete: a runner implements it without asking anything, using only code, tests and the config's `check` commands.
 
 1. `## Goal`: what the task delivers, in one or two sentences, with the requirement ids it serves.
-2. `## Context`: the code entry points and goldens that matter, and where new code goes.
+2. `## Context`: the code entry points and snapshot images that matter, and where new code goes.
 3. `## Contract` (only when the task provides or uses something from another task): each symbol or path marked `existing`, `new here` or `provided by <task-id>`, with its signature, inputs, outputs, failures and ownership. Link shared agreements in the parent instead of copying them. An unwired piece names its consumer task. New names are proposals fixed by this plan, not claims about existing code.
-4. `## View spec` (visual tasks only): the widget or screen states, themes, strings, accessibility and navigation. An isolated widget covers its own states and callbacks; assembly covers wiring and the full screen.
+4. `## View spec` (visual tasks only): the component or screen states, themes, strings, accessibility and navigation. An isolated component covers its own states and callbacks; assembly covers wiring and the full screen.
 5. `## Mockup` (visual tasks only): link to the approved `mockup.html` and the states this task implements.
 6. `## Decisions` (only when there are choices a runner might otherwise reverse).
 7. `## Out of scope`
-8. `## Files and tests`: only what `touches` and the `Check`s do not say: which files are new, each test file with its kind, and any planned fake or harness change. Explain a behavioral widget test, or why no test is planned, only when that is the case.
+8. `## Files and tests`: only what `touches` and the `Check`s do not say: which files are new, each test file with its kind, and any planned fake or harness change. Explain a behavioral component test, or why no test is planned, only when that is the case.
 9. `## Acceptance`: the task's behavior, one checkbox per behavior or edge case, on one line each: `- [ ] When <situation>, then <result>. Check: <check>.` Start with `Given <state>,` only when the starting state is not obvious. There is no separate behavior section: this list is the specification, the tests to write and the definition of done.
 
 A `Check` is one of these, and nothing else:
 
-- A test file and the test case, for example ``Check: `test/timer_list_test.dart` "delete removes the timer".``
-- A golden file, only when `goldens_dir` is set.
+- A test file and the test case, for example ``Check: `test/timer_list.test.ts` "delete removes the timer".``
+- A snapshot image, only when `goldens_dir` is set.
 - A command from the config's `check` list, written exactly as it appears there.
 
 New and refined plans use these sections. Existing tasks keep their ids; before dispatching a task in an older layout, refine it rather than asking a runner to invent the missing parts.
@@ -116,7 +116,7 @@ All of these are true:
 
 - No open decision is left, and the task reads clearly to an agent that has not seen the planning conversation (cold read passed).
 - Every criterion has a `Check` of an allowed kind.
-- A visual widget/assembly task has its view spec, and a linked mockup the user approved when the change needed one (a new screen, sheet, dialog or layout). ViewModel/state-only tasks omit both.
+- A visual component/assembly task has its view spec, and a linked mockup the user approved when the change needed one (a new screen, sheet, dialog or layout). State-only tasks omit both.
 - `complexity` (a number from 1 to 10), `depends-on` and `touches` are filled in. `depends-on` ids exist.
 - Its contract, consumer/assembly ownership and exact validation plan are settled, consistent with its dependencies and executable within runner boundaries. No required test infrastructure or technical decision is left for a runner to discover.
 - The whole split has complete requirement coverage and compatible contracts. Each PR preserves a buildable, usable app with its completed prerequisites.
@@ -140,8 +140,8 @@ The task branch is `<type>/<id-lowercase>-<slug>`, where `<slug>` is the folder 
 
 Two tasks overlap when their `touches` overlap. They never run at the same time.
 
-- `touches` lists exact paths: code, tests and, when `goldens_dir` is set, golden files. Use a narrow glob only when necessary.
-- List specific golden files, never the whole `goldens_dir`.
+- `touches` lists exact paths: code, tests and, when `goldens_dir` is set, snapshot images. Use a narrow glob only when necessary.
+- List specific snapshot images, never the whole `goldens_dir`.
 - Prefer exact code/test paths to feature-wide globs. If several tasks edit the snapshot harness, list that file in each; overlap is intentional serialization, not a semantic dependency.
 - When a task adds strings, list the localization folder the project rules name. It counts as a path like any other, so two tasks that add strings overlap.
 - Do not list generated index files the planner notes name, or the backlog indexes. A merge conflict there is small and the user resolves it.

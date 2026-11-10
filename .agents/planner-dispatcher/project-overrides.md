@@ -5,7 +5,7 @@ The rules of this Dart package, by stage. Each role reads "Common" and its own s
 ## Common
 
 - **Per-file commands.** Format with `fvm dart format <path>`, analyze with `fvm dart analyze <path>` and test with `fvm dart test <path>`, always with a literal path.
-- **Independence.** The shipped files (`lib/`, `bin/`, `.agents/`, `templates/`, `README.md`) never name another project, a fixed build command or a local home path.
+- **Independence.** The shipped files (`lib/`, `bin/`, `.agents/`, `templates/`, `stacks/`, `README.md`) never name another project, a fixed build command or a local home path.
 
 ## Implementation
 
