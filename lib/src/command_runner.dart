@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 /// The result of a finished command.
@@ -24,11 +25,19 @@ Future<CommandResult> runSystemCommand(
   List<String> args, {
   String? workingDirectory,
 }) async {
-  final result = await Process.run(resolveExecutable(executable), args, workingDirectory: workingDirectory);
+  // Read the raw bytes: git can print binary files (such as images) in a diff,
+  // and a strict UTF-8 decode would throw on them. Bad bytes become U+FFFD.
+  final result = await Process.run(
+    resolveExecutable(executable),
+    args,
+    workingDirectory: workingDirectory,
+    stdoutEncoding: null,
+    stderrEncoding: null,
+  );
   return CommandResult(
     exitCode: result.exitCode,
-    stdout: result.stdout as String,
-    stderr: result.stderr as String,
+    stdout: utf8.decode(result.stdout as List<int>, allowMalformed: true),
+    stderr: utf8.decode(result.stderr as List<int>, allowMalformed: true),
   );
 }
 

@@ -10,6 +10,13 @@ void main() {
     expect(() => runSystemCommand(missing, []), throwsA(isA<ProcessException>()));
   });
 
+  test('output with bytes that are not UTF-8 does not throw', () async {
+    final result = await runSystemCommand('printf', [r'ok\377done']);
+    expect(result.ok, isTrue);
+    expect(result.stdout, startsWith('ok'));
+    expect(result.stdout, endsWith('done'));
+  });
+
   test('resolves a user executable only when PATH does not contain it', () async {
     final root = await Directory.systemTemp.createTemp('dispatcher_test');
     addTearDown(() => root.delete(recursive: true));
