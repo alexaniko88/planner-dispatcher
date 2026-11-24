@@ -108,7 +108,7 @@ New and refined plans use these sections. Existing tasks keep their ids; before 
 
 The story lists its requirements once, as R1, R2…, each with the task ids that deliver it, and holds contracts its tasks share. The epic holds cross-story agreements. This is a scope map, not progress tracking.
 
-`notes.md` is written by the worker: decisions it took, the evidence for each criterion, the PR link, and, when blocked, the exact question under `## Blocked`.
+`notes.md` is written by the worker: decisions it took, the evidence for each criterion, the PR link, and, when blocked, the exact question under `## Blocked`. When a review fix changes an accepted criterion, the worker writes that change in `notes.md` before it changes the code.
 
 ## When a task is `ready`
 

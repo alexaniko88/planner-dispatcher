@@ -36,3 +36,4 @@ Flag these, with a file and a line:
 - After a change that applies a rule across the project (a style sweep, a rename), run your own search for the pattern and check the matches by hand. Do not rely only on the diff.
 - A criterion whose only test covers the happy path, or only checks that nothing throws (general).
 - A test that passes without exercising the changed branch (general; critical when the criterion is not proven at all).
+- A doc, rule or planner-notes fact that the change made wrong, left in place, or code the change made unreachable and left in place (general).
